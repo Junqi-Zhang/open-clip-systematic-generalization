@@ -62,9 +62,14 @@ def parse_args(args):
     )
     parser.add_argument(
         "--dataset-type",
-        choices=["webdataset", "csv", "synthetic", "auto"],
+        choices=["webdataset", "csv", "synthetic", "folder", "auto"],
         default="auto",
-        help="Which type of dataset to process."
+        help="Which type of dataset to process. 'folder' means ImageNet-style folder structure"
+    )
+    parser.add_argument(
+        "--text-type",
+        default="template",
+        help="Which type of text for each image, active for folder datasets only."
     )
     parser.add_argument(
         "--dataset-resampled",
