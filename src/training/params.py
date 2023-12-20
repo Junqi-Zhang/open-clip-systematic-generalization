@@ -19,7 +19,8 @@ class ParseKwargs(argparse.Action):
             try:
                 kw[key] = ast.literal_eval(value)
             except ValueError:
-                kw[key] = str(value)  # fallback to string (avoid need to escape on command line)
+                # fallback to string (avoid need to escape on command line)
+                kw[key] = str(value)
         setattr(namespace, self.dest, kw)
 
 
@@ -132,10 +133,14 @@ def parse_args(args):
         "--epochs-cooldown", type=int, default=None,
         help="When scheduler w/ cooldown used, perform cooldown from total_epochs - cooldown_epochs onwards."
     )
-    parser.add_argument("--lr", type=float, default=None, help="Learning rate.")
-    parser.add_argument("--beta1", type=float, default=None, help="Adam beta 1.")
-    parser.add_argument("--beta2", type=float, default=None, help="Adam beta 2.")
-    parser.add_argument("--eps", type=float, default=None, help="Adam epsilon.")
+    parser.add_argument("--lr", type=float, default=None,
+                        help="Learning rate.")
+    parser.add_argument("--beta1", type=float,
+                        default=None, help="Adam beta 1.")
+    parser.add_argument("--beta2", type=float,
+                        default=None, help="Adam beta 2.")
+    parser.add_argument("--eps", type=float, default=None,
+                        help="Adam epsilon.")
     parser.add_argument("--wd", type=float, default=0.2, help="Weight decay.")
     parser.add_argument(
         "--warmup", type=int, default=10000, help="Number of steps to warmup for."
@@ -188,7 +193,8 @@ def parse_args(args):
     )
     parser.add_argument(
         "--precision",
-        choices=["amp", "amp_bf16", "amp_bfloat16", "bf16", "fp16", "pure_bf16", "pure_fp16", "fp32"],
+        choices=["amp", "amp_bf16", "amp_bfloat16", "bf16",
+                 "fp16", "pure_bf16", "pure_fp16", "fp32"],
         default="amp",
         help="Floating point precision."
     )
