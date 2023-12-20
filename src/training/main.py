@@ -52,14 +52,16 @@ def natural_key(string_):
     return [int(s) if s.isdigit() else s for s in re.split(r'(\d+)', string_.lower())]
 
 
-def get_latest_checkpoint(path: str, remote : bool):
+def get_latest_checkpoint(path: str, remote: bool):
     # as writen, this glob recurses, so can pick up checkpoints across multiple sub-folders
     if remote:
-        result = subprocess.run(["aws", "s3", "ls", path + "/"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        result = subprocess.run(
+            ["aws", "s3", "ls", path + "/"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         print(result)
         if result.returncode == 1:
             return None
-        checkpoints = [os.path.join(path, x.split(' ')[-1]) for x in result.stdout.decode().split('\n')[:-1]]
+        checkpoints = [os.path.join(path, x.split(' ')[-1])
+                       for x in result.stdout.decode().split('\n')[:-1]]
     else:
         checkpoints = glob.glob(path + '**/*.pt', recursive=True)
     if checkpoints:
@@ -121,7 +123,8 @@ def main(args):
     args.tensorboard = 'tensorboard' in args.report_to or 'all' in args.report_to
     args.checkpoint_path = os.path.join(log_base_path, "checkpoints")
     if is_master(args):
-        args.tensorboard_path = os.path.join(log_base_path, "tensorboard") if args.tensorboard else ''
+        args.tensorboard_path = os.path.join(
+            log_base_path, "tensorboard") if args.tensorboard else ''
         for dirname in [args.tensorboard_path, args.checkpoint_path]:
             if dirname:
                 os.makedirs(dirname, exist_ok=True)
@@ -133,9 +136,11 @@ def main(args):
         checkpoint_path = args.checkpoint_path
         # If using remote_sync, need to check the remote instead of the local checkpoints folder.
         if args.remote_sync is not None:
-            checkpoint_path = os.path.join(args.remote_sync, args.name, "checkpoints")
+            checkpoint_path = os.path.join(
+                args.remote_sync, args.name, "checkpoints")
             if args.save_most_recent:
-                print('Error. Cannot use save-most-recent with remote_sync and resume latest.')
+                print(
+                    'Error. Cannot use save-most-recent with remote_sync and resume latest.')
                 return -1
             if args.remote_sync_protocol != 's3':
                 print('Error. Sync protocol not supported when using resume latest.')
@@ -146,17 +151,21 @@ def main(args):
             # stress, however it's very difficult to fully work around such situations.
             if args.save_most_recent:
                 # if --save-most-recent flag is set, look for latest at a fixed filename
-                resume_from = os.path.join(checkpoint_path, LATEST_CHECKPOINT_NAME)
+                resume_from = os.path.join(
+                    checkpoint_path, LATEST_CHECKPOINT_NAME)
                 if not os.path.exists(resume_from):
                     # If no latest checkpoint has been saved yet, don't try to resume
                     resume_from = None
             else:
                 # otherwise, list checkpoint dir contents and pick the newest checkpoint
-                resume_from = get_latest_checkpoint(checkpoint_path, remote=args.remote_sync is not None)
+                resume_from = get_latest_checkpoint(
+                    checkpoint_path, remote=args.remote_sync is not None)
             if resume_from:
-                logging.info(f'Found latest resume checkpoint at {resume_from}.')
+                logging.info(
+                    f'Found latest resume checkpoint at {resume_from}.')
             else:
-                logging.info(f'No latest resume checkpoint found in {checkpoint_path}.')
+                logging.info(
+                    f'No latest resume checkpoint found in {checkpoint_path}.')
         if args.distributed:
             # sync found checkpoint path to all ranks
             resume_from = broadcast_object(args, resume_from)
@@ -170,8 +179,8 @@ def main(args):
     if is_master(args) and args.remote_sync is not None:
         # first make sure it works
         result = remote_sync(
-            os.path.join(args.logs, args.name), 
-            os.path.join(args.remote_sync, args.name), 
+            os.path.join(args.logs, args.name),
+            os.path.join(args.remote_sync, args.name),
             args.remote_sync_protocol
         )
         if result:
@@ -182,8 +191,8 @@ def main(args):
         # if all looks good, start a process to do this every args.remote_sync_frequency seconds
         remote_sync_process = start_sync_process(
             args.remote_sync_frequency,
-            os.path.join(args.logs, args.name), 
-            os.path.join(args.remote_sync, args.name), 
+            os.path.join(args.logs, args.name),
+            os.path.join(args.remote_sync, args.name),
             args.remote_sync_protocol
         )
         remote_sync_process.start()
@@ -207,9 +216,9 @@ def main(args):
     dist_model = None
     args.distill = args.distill_model is not None and args.distill_pretrained is not None
     if args.distill:
-        #FIXME: support distillation with grad accum.
+        # FIXME: support distillation with grad accum.
         assert args.accum_freq == 1
-        #FIXME: support distillation with coca.
+        # FIXME: support distillation with coca.
         assert 'coca' not in args.model.lower()
 
     if isinstance(args.force_image_size, (tuple, list)) and len(args.force_image_size) == 1:
@@ -242,7 +251,7 @@ def main(args):
     if args.distill:
         # FIXME: currently assumes the model you're distilling from has the same tokenizer & transforms.
         dist_model, _, _ = create_model_and_transforms(
-            args.distill_model, 
+            args.distill_model,
             args.distill_pretrained,
             device=device,
             precision=args.precision,
@@ -256,7 +265,8 @@ def main(args):
         import bitsandbytes as bnb
         from open_clip.utils import replace_linear
         print(f'=> replacing linear layers with {args.use_bnb_linear}')
-        linear_replacement_cls = getattr(bnb.nn.triton_based_modules, args.use_bnb_linear)
+        linear_replacement_cls = getattr(
+            bnb.nn.triton_based_modules, args.use_bnb_linear)
         replace_linear(model, linear_replacement_cls)
         model = model.to(device)
 
@@ -296,10 +306,12 @@ def main(args):
         if args.ddp_static_graph:
             # this doesn't exist in older PyTorch, arg only added if enabled
             ddp_args['static_graph'] = True
-        model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[device], **ddp_args)
-    
+        model = torch.nn.parallel.DistributedDataParallel(
+            model, device_ids=[device], **ddp_args)
+
         if args.distill:
-            dist_model = torch.nn.parallel.DistributedDataParallel(dist_model, device_ids=[device], **ddp_args)
+            dist_model = torch.nn.parallel.DistributedDataParallel(
+                dist_model, device_ids=[device], **ddp_args)
 
     # create optimizer and scaler
     optimizer = None
@@ -308,12 +320,16 @@ def main(args):
     if args.train_data or args.dataset_type == "synthetic":
         assert not args.trace, 'Cannot train with traced model'
 
-        exclude = lambda n, p: p.ndim < 2 or "bn" in n or "ln" in n or "bias" in n or 'logit_scale' in n
-        include = lambda n, p: not exclude(n, p)
+        def exclude(
+            n, p): return p.ndim < 2 or "bn" in n or "ln" in n or "bias" in n or 'logit_scale' in n
+
+        def include(n, p): return not exclude(n, p)
 
         named_parameters = list(model.named_parameters())
-        gain_or_bias_params = [p for n, p in named_parameters if exclude(n, p) and p.requires_grad]
-        rest_params = [p for n, p in named_parameters if include(n, p) and p.requires_grad]
+        gain_or_bias_params = [
+            p for n, p in named_parameters if exclude(n, p) and p.requires_grad]
+        rest_params = [p for n, p in named_parameters if include(
+            n, p) and p.requires_grad]
 
         optimizer = optim.AdamW(
             [
@@ -325,7 +341,8 @@ def main(args):
             eps=args.eps,
         )
         if args.horovod:
-            optimizer = hvd.DistributedOptimizer(optimizer, named_parameters=model.named_parameters())
+            optimizer = hvd.DistributedOptimizer(
+                optimizer, named_parameters=model.named_parameters())
             hvd.broadcast_parameters(model.state_dict(), root_rank=0)
             hvd.broadcast_optimizer_state(optimizer, root_rank=0)
 
@@ -346,11 +363,13 @@ def main(args):
                 optimizer.load_state_dict(checkpoint["optimizer"])
             if scaler is not None and 'scaler' in checkpoint:
                 scaler.load_state_dict(checkpoint['scaler'])
-            logging.info(f"=> resuming checkpoint '{args.resume}' (epoch {start_epoch})")
+            logging.info(
+                f"=> resuming checkpoint '{args.resume}' (epoch {start_epoch})")
         else:
             # loading a bare (model only) checkpoint for fine-tune or evaluation
             model.load_state_dict(checkpoint)
-            logging.info(f"=> loaded checkpoint '{args.resume}' (epoch {start_epoch})")
+            logging.info(
+                f"=> loaded checkpoint '{args.resume}' (epoch {start_epoch})")
 
     # initialize datasets
     tokenizer = get_tokenizer(args.model)
@@ -365,15 +384,17 @@ def main(args):
     # create scheduler if train
     scheduler = None
     if 'train' in data and optimizer is not None:
-        total_steps = (data["train"].dataloader.num_batches // args.accum_freq) * args.epochs
+        total_steps = (data["train"].dataloader.num_batches //
+                       args.accum_freq) * args.epochs
         if args.lr_scheduler == "cosine":
             scheduler = cosine_lr(optimizer, args.lr, args.warmup, total_steps)
         elif args.lr_scheduler == "const":
             scheduler = const_lr(optimizer, args.lr, args.warmup, total_steps)
         elif args.lr_scheduler == "const-cooldown":
-            assert args.epochs_cooldown is not None,\
+            assert args.epochs_cooldown is not None, \
                 "Please specify the number of cooldown epochs for this lr schedule."
-            cooldown_steps = (data["train"].dataloader.num_batches // args.accum_freq) * args.epochs_cooldown
+            cooldown_steps = (
+                data["train"].dataloader.num_batches // args.accum_freq) * args.epochs_cooldown
             scheduler = const_lr_cooldown(
                 optimizer, args.lr, args.warmup, total_steps,
                 cooldown_steps, args.lr_cooldown_power, args.lr_cooldown_end)
@@ -424,7 +445,8 @@ def main(args):
             from open_clip.utils import convert_int8_model_to_inference_mode
             convert_int8_model_to_inference_mode(model)
         # Evaluate.
-        evaluate(model, data, start_epoch, args, tb_writer=writer, tokenizer=tokenizer)
+        evaluate(model, data, start_epoch, args,
+                 tb_writer=writer, tokenizer=tokenizer)
         return
 
     loss = create_loss(args)
@@ -433,11 +455,13 @@ def main(args):
         if is_master(args):
             logging.info(f'Start epoch {epoch}')
 
-        train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, dist_model, args, tb_writer=writer)
+        train_one_epoch(model, data, loss, epoch, optimizer,
+                        scaler, scheduler, dist_model, args, tb_writer=writer)
         completed_epoch = epoch + 1
 
         if any(v in data for v in ('val', 'imagenet-val', 'imagenet-v2')):
-            evaluate(model, data, completed_epoch, args, tb_writer=writer, tokenizer=tokenizer)
+            evaluate(model, data, completed_epoch, args,
+                     tb_writer=writer, tokenizer=tokenizer)
 
         # Saving checkpoints.
         if args.save_logs:
@@ -451,21 +475,25 @@ def main(args):
                 checkpoint_dict["scaler"] = scaler.state_dict()
 
             if completed_epoch == args.epochs or (
-                args.save_frequency > 0 and (completed_epoch % args.save_frequency) == 0
+                args.save_frequency > 0 and (
+                    completed_epoch % args.save_frequency) == 0
             ):
                 torch.save(
                     checkpoint_dict,
-                    os.path.join(args.checkpoint_path, f"epoch_{completed_epoch}.pt"),
+                    os.path.join(args.checkpoint_path,
+                                 f"epoch_{completed_epoch}.pt"),
                 )
             if args.delete_previous_checkpoint:
-                previous_checkpoint = os.path.join(args.checkpoint_path, f"epoch_{completed_epoch - 1}.pt")
+                previous_checkpoint = os.path.join(
+                    args.checkpoint_path, f"epoch_{completed_epoch - 1}.pt")
                 if os.path.exists(previous_checkpoint):
                     os.remove(previous_checkpoint)
 
             if args.save_most_recent:
                 # try not to corrupt the latest checkpoint if save fails
                 tmp_save_path = os.path.join(args.checkpoint_path, "tmp.pt")
-                latest_save_path = os.path.join(args.checkpoint_path, LATEST_CHECKPOINT_NAME)
+                latest_save_path = os.path.join(
+                    args.checkpoint_path, LATEST_CHECKPOINT_NAME)
                 torch.save(checkpoint_dict, tmp_save_path)
                 os.replace(tmp_save_path, latest_save_path)
 
@@ -477,15 +505,15 @@ def main(args):
         logging.info('Final remote sync.')
         remote_sync_process.terminate()
         result = remote_sync(
-            os.path.join(args.logs, args.name), 
-            os.path.join(args.remote_sync, args.name), 
+            os.path.join(args.logs, args.name),
+            os.path.join(args.remote_sync, args.name),
             args.remote_sync_protocol
         )
         if result:
             logging.info('Final remote sync successful.')
         else:
             logging.info('Final remote sync failed.')
-    
+
 
 def copy_codebase(args):
     from shutil import copytree, ignore_patterns
@@ -499,7 +527,8 @@ def copy_codebase(args):
     current_code_path = os.path.realpath(__file__)
     for _ in range(3):
         current_code_path = os.path.dirname(current_code_path)
-    copytree(current_code_path, new_code_path, ignore=ignore_patterns('log', 'logs', 'wandb'))
+    copytree(current_code_path, new_code_path,
+             ignore=ignore_patterns('log', 'logs', 'wandb'))
     print("Done copying code.")
     return 1
 
