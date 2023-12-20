@@ -14,7 +14,7 @@ from torch import optim
 from torch.cuda.amp import GradScaler
 
 try:
-    import wandb
+    import wandb  # type: ignore
 except ImportError:
     wandb = None
 
@@ -24,7 +24,7 @@ except ImportError:
     tensorboard = None
 
 try:
-    import horovod.torch as hvd
+    import horovod.torch as hvd  # type: ignore
 except ImportError:
     hvd = None
 
@@ -262,7 +262,7 @@ def main(args):
               '   this is an experimental feature which requires two extra pip installs\n'
               '   pip install bitsandbytes triton'
               '   please make sure to use triton 2.0.0')
-        import bitsandbytes as bnb
+        import bitsandbytes as bnb  # type: ignore
         from open_clip.utils import replace_linear
         print(f'=> replacing linear layers with {args.use_bnb_linear}')
         linear_replacement_cls = getattr(
