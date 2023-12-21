@@ -19,9 +19,12 @@ from torch.utils.data import Dataset, DataLoader, SubsetRandomSampler, IterableD
 from torch.utils.data.distributed import DistributedSampler
 from webdataset.filters import _shuffle
 from webdataset.tariterators import base_plus_ext, url_opener, tar_file_expander, valid_sample
+from typing import Any, Callable, Optional, Tuple
+from open_clip import SIMPLE_IMAGENET_TEMPLATES, OPENAI_IMAGENET_TEMPLATES
+from open_clip import IMAGENET_FOLDERS2CLASSNAMES, IMAGENET_CLASSNAMES
 
 try:
-    import horovod.torch as hvd
+    import horovod.torch as hvd  # type: ignore
 except ImportError:
     hvd = None
 
@@ -122,7 +125,7 @@ def get_imagenet(args, preprocess_fns, split):
     preprocess_train, preprocess_val = preprocess_fns
 
     if split == "v2":
-        from imagenetv2_pytorch import ImageNetV2Dataset
+        from imagenetv2_pytorch import ImageNetV2Dataset  # type: ignore
         dataset = ImageNetV2Dataset(
             location=args.imagenet_v2, transform=preprocess_val)
     else:
@@ -152,6 +155,22 @@ def get_imagenet(args, preprocess_fns, split):
         sampler = SubsetRandomSampler(np.where(idxs)[0])
     else:
         sampler = None
+
+    dataloader = torch.utils.data.DataLoader(
+        dataset,
+        batch_size=args.batch_size,
+        num_workers=args.workers,
+        sampler=sampler,
+    )
+
+    return DataInfo(dataloader=dataloader, sampler=sampler)
+
+
+def get_imagenet_for_eval_by_path(args, preprocess_fn, data_path):
+
+    assert data_path
+    dataset = datasets.ImageFolder(data_path, transform=preprocess_fn)
+    sampler = None
 
     dataloader = torch.utils.data.DataLoader(
         dataset,
@@ -535,6 +554,108 @@ def get_synthetic_dataset(args, preprocess_fn, is_train, epoch=0, tokenizer=None
     return DataInfo(dataloader, sampler)
 
 
+class FolderTemplateDataset(datasets.ImageFolder):
+
+    def __init__(
+        self,
+        root: str,
+        transform: Callable,
+        template_type: str,
+        tokenizer: Optional[Callable] = None,
+        text_embeds_path: Optional[str] = None
+    ):
+        super().__init__(root=root, transform=transform)
+        self.templates = self.get_templates(template_type)
+        self.tokenizer = tokenizer
+        if text_embeds_path:
+            self.text_embeds = torch.load(
+                text_embeds_path, map_location="cpu"
+            ).t()
+
+        # sorted list of folders, coresponding classnames
+        all_folders, all_classnames = self.get_all_folders_and_classnames(root)
+        self.target_transform_from_root_to_all = {
+            value: all_folders.index(key)
+            for key, value in self.class_to_idx.items()
+        }
+        self.target_classnames = {
+            key: all_classnames[value]
+            for key, value in self.target_transform_from_root_to_all.items()
+        }
+
+    def get_templates(self, template_type):
+        template_dict = {
+            "simple_imagenet_templates": SIMPLE_IMAGENET_TEMPLATES,
+            "openai_imagenet_templates": OPENAI_IMAGENET_TEMPLATES
+        }
+        if template_type in template_dict:
+            return template_dict[template_type]
+        else:
+            raise ValueError(f"Unsupported template type: {template_type}.")
+
+    def get_all_folders_and_classnames(self, root):
+        if "ImageNet" in root:
+            return sorted(IMAGENET_FOLDERS2CLASSNAMES.keys()), IMAGENET_CLASSNAMES
+        else:
+            raise ValueError(f"Unsupported data folder: {root}.")
+
+    def __getitem__(self, index: int) -> Tuple[Any, Any]:
+        path, target = self.samples[index]
+
+        # get image
+        sample = self.loader(path)
+        if self.transform is not None:
+            sample = self.transform(sample)
+
+        # get text
+        if hasattr(self, "text_embeds"):
+            transformed_target = self.target_transform_from_root_to_all[target]
+            text_embed = self.text_embeds[transformed_target]
+            return sample, text_embed
+        else:
+            target_classname = self.target_classnames[target]
+            text = " ".join([template(target_classname)
+                            for template in self.templates])
+            if self.tokenizer:
+                text = self.tokenizer(text)[0]
+            return sample, text
+
+
+def get_folder_dataset(args, preprocess_fn, is_train, epoch=0, tokenizer=None):
+    data_folder = args.train_data if is_train else args.val_data
+    assert data_folder
+
+    if "template" in args.text_type:
+        dataset = FolderTemplateDataset(
+            data_folder,
+            preprocess_fn,
+            template_type=args.text_type,
+            tokenizer=tokenizer,
+            text_embeds_path=args.text_embeds_path
+        )
+    else:
+        raise ValueError(f"Unsupported text type: {args.text_type}.")
+
+    num_samples = len(dataset)
+    sampler = DistributedSampler(
+        dataset) if args.distributed and is_train else None
+    shuffle = is_train and sampler is None
+
+    dataloader = DataLoader(
+        dataset,
+        batch_size=args.batch_size,
+        shuffle=shuffle,
+        num_workers=args.workers,
+        pin_memory=True,
+        sampler=sampler,
+        drop_last=is_train,
+    )
+    dataloader.num_samples = num_samples
+    dataloader.num_batches = len(dataloader)
+
+    return DataInfo(dataloader, sampler)
+
+
 def get_dataset_fn(data_path, dataset_type):
     if dataset_type == "webdataset":
         return get_wds_dataset
@@ -551,6 +672,8 @@ def get_dataset_fn(data_path, dataset_type):
         else:
             raise ValueError(
                 f"Tried to figure out dataset type, but failed for extension {ext}.")
+    elif dataset_type == "folder":
+        return get_folder_dataset
     else:
         raise ValueError(f"Unsupported dataset type: {dataset_type}")
 
@@ -572,5 +695,9 @@ def get_data(args, preprocess_fns, epoch=0, tokenizer=None):
 
     if args.imagenet_v2 is not None:
         data["imagenet-v2"] = get_imagenet(args, preprocess_fns, "v2")
+
+    if args.imagenet_overall_prompt is not None:
+        data["imagenet-overall-prompt"] = get_imagenet_for_eval_by_path(
+            args, preprocess_val, args.imagenet_overall_prompt)
 
     return data

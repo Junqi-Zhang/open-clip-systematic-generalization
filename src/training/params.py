@@ -68,8 +68,15 @@ def parse_args(args):
     )
     parser.add_argument(
         "--text-type",
-        default="template",
-        help="Which type of text for each image, active for folder datasets only."
+        choices=["simple_imagenet_templates"],
+        default="simple_imagenet_templates",
+        help="Which type of text for each image, Useful for folder datasets only."
+    )
+    parser.add_argument(
+        "--text-embeds-path",
+        type=str,
+        default=None,
+        help="Path to extracted text embeds for all classes."
     )
     parser.add_argument(
         "--dataset-resampled",
@@ -106,6 +113,12 @@ def parse_args(args):
         type=str,
         default=None,
         help="Path to imagenet v2 for conducting zero shot evaluation.",
+    )
+    parser.add_argument(
+        "--imagenet-overall-prompt",
+        type=str,
+        default=None,
+        help="Path to imagenet overall prompt for conducting zero shot evaluation.",
     )
     parser.add_argument(
         "--logs",
