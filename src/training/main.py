@@ -320,8 +320,8 @@ def main(args):
     if args.train_data or args.dataset_type == "synthetic":
         assert not args.trace, 'Cannot train with traced model'
 
-        def exclude(
-            n, p): return p.ndim < 2 or "bn" in n or "ln" in n or "bias" in n or 'logit_scale' in n
+        def exclude(n, p):
+            return p.ndim < 2 or "bn" in n or "ln" in n or "bias" in n or 'logit_scale' in n
 
         def include(n, p): return not exclude(n, p)
 
