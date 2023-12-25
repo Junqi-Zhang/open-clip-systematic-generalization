@@ -1,0 +1,11 @@
+{
+    "embed_dim": 4096,
+    "vision_cfg": {},
+    "text_cfg": {
+        "hf_model_name": "google/flan-t5-xxl",
+        "hf_tokenizer_name": "google/flan-t5-xxl",
+        "proj": "identity"
+    },
+    "vision_only": false,
+    "text_only": true
+}
