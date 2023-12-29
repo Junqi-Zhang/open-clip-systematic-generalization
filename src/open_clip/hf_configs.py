@@ -42,6 +42,19 @@ arch_dict = {
         },
         "pooler": "mean_pooler",
     },
+    # https://huggingface.co/docs/transformers/model_doc/t5
+    "t5": {
+        "config_names": {
+            "context_length": "",
+            "vocab_size": "vocab_size",
+            "width": "d_model",
+            "heads": "num_heads",
+            "layers": "num_layers",
+            "layer_attr": "block",
+            "token_embeddings_attr": "embed_tokens"
+        },
+        "pooler": "mean_pooler",
+    },
     # https://huggingface.co/docs/transformers/model_doc/bert
     "bert": {
         "config_names": {
