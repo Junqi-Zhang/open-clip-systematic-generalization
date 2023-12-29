@@ -253,11 +253,14 @@ def parse_args(args):
         help="Freeze BatchNorm running stats in image tower for any locked layers.",
     )
     parser.add_argument(
+        '--image-constant-key', type=str, default=None,
+        help='The key for image constant contains mean val and std deviation of dataset')
+    parser.add_argument(
         '--image-mean', type=float, nargs='+', default=None, metavar='MEAN',
         help='Override default image mean value of dataset')
     parser.add_argument(
         '--image-std', type=float, nargs='+', default=None, metavar='STD',
-        help='Override default image std deviation of of dataset')
+        help='Override default image std deviation of dataset')
     parser.add_argument(
         '--image-interpolation',
         default=None, type=str, choices=['bicubic', 'bilinear', 'random'],
@@ -268,7 +271,9 @@ def parse_args(args):
         default=None, type=str, choices=['shortest', 'longest', 'squash'],
         help="Override default image resize (& crop) mode during inference"
     )
-    parser.add_argument('--aug-cfg', nargs='*', default={}, action=ParseKwargs)
+    parser.add_argument('--aug-cfg', nargs='*', default={}, action=ParseKwargs,
+                        help=("Augmentation config for training, e.g. --aug-cfg use_timm=True hflip=0.5, "
+                              "hflip=0.5 for ImageNet-style augmentation, hflip=0.0 for contrastive learning."))
     parser.add_argument(
         "--grad-checkpointing",
         default=False,

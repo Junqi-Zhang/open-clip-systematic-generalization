@@ -9,7 +9,12 @@ import torchvision.transforms.functional as F
 from torchvision.transforms import Normalize, Compose, RandomResizedCrop, InterpolationMode, ToTensor, Resize, \
     CenterCrop, ColorJitter, Grayscale
 
-from .constants import OPENAI_DATASET_MEAN, OPENAI_DATASET_STD
+from .constants import (
+    IMAGENET_MEAN,
+    IMAGENET_STD,
+    OPENAI_DATASET_MEAN,
+    OPENAI_DATASET_STD,
+)
 from .utils import to_2tuple
 
 
@@ -35,6 +40,15 @@ class PreprocessCfg:
         return (self.num_channels,) + to_2tuple(self.size)
 
 _PREPROCESS_KEYS = set(asdict(PreprocessCfg()).keys())
+
+
+def get_image_constant(key):
+    image_constants = {
+        "openai": (OPENAI_DATASET_MEAN, OPENAI_DATASET_STD),
+        "imagenet": (IMAGENET_MEAN, IMAGENET_STD),
+    }
+    assert key in image_constants, f"Unknown image constant key: {key}"
+    return image_constants[key]
 
 
 def merge_preprocess_dict(
@@ -66,6 +80,7 @@ class AugmentationCfg:
     re_prob: Optional[float] = None
     re_count: Optional[int] = None
     use_timm: bool = False
+    hflip: float = None
 
     # params for simclr_jitter_gray
     color_jitter_prob: float = None
@@ -320,10 +335,12 @@ def image_transform(
             aug_cfg_dict.pop('color_jitter_prob', None)
             aug_cfg_dict.pop('gray_scale_prob', None)
 
+            assert 'hflip' in aug_cfg_dict, 'Must specify hflip in aug-cfg when use_timm=True'
+
             train_transform = create_transform(
                 input_size=input_size,
                 is_training=True,
-                hflip=0.,
+                # hflip=0.,  # timm default is 0.5
                 mean=mean,
                 std=std,
                 re_mode='pixel',
