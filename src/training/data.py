@@ -533,7 +533,7 @@ class SyntheticDataset(Dataset):
 def get_synthetic_dataset(args, preprocess_fn, is_train, epoch=0, tokenizer=None):
     image_size = preprocess_fn.transforms[0].size
     dataset = SyntheticDataset(
-        transform=preprocess_fn, image_size=image_size, dataset_size=args.train_num_samples, tokenizer=tokenizer)
+        transform=preprocess_fn, image_size=image_size, tokenizer=tokenizer)
     num_samples = len(dataset)
     sampler = DistributedSampler(
         dataset) if args.distributed and is_train else None
