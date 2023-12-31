@@ -146,9 +146,11 @@ gpu1sync.sh
 **.jsonl
 src/sbatch
 src/misc
-.vscode
+.vscode/*
 src/debug
 core.*
 
 # Allow
 !src/evaluation/misc/results_dbs/*
+# Ignore all files and folders in .vscode except for launch.json
+!.vscode/launch.json

@@ -1,0 +1,76 @@
+{
+    // Use IntelliSense to learn about related properties.
+    // Hover to view descriptions of existing properties.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: extract text embeds",
+            "type": "python",
+            "request": "launch",
+            "console": "internalConsole",
+            "redirectOutput": true,
+            "justMyCode": false,
+            "stopOnEntry": true,
+            "cwd": "${workspaceFolder}/src",
+            "module": "training.main",
+            "args": [
+                "--imagenet-overall-prompt", "../data/ImageNet/val",
+                "--imagenet-single-template", "../data/ImageNet/val",
+                "--model", "flan-t5-xxl-text-embeds-extractor",
+                "--lock-text",
+                "--debug",
+                "--precision", "amp_bf16",
+            ],
+            "env": {
+                "HF_ENDPOINT": "https://hf-mirror.com",
+                "CUDA_VISIBLE_DEVICES": "0",
+            }
+        },
+        {
+            "name": "Python: extract bert-tiny text embeds",
+            "type": "python",
+            "request": "launch",
+            "console": "internalConsole",
+            "redirectOutput": true,
+            "justMyCode": false,
+            "stopOnEntry": true,
+            "cwd": "${workspaceFolder}/src",
+            "module": "training.main",
+            "args": [
+                "--imagenet-overall-prompt", "../data/ImageNet/val",
+                "--imagenet-single-template", "../data/ImageNet/val",
+                "--model", "bert-tiny-uncased-text-embeds-extractor",
+                "--lock-text",
+                "--debug",
+                "--precision", "amp_bf16",
+            ],
+            "env": {
+                "HF_ENDPOINT": "https://hf-mirror.com",
+                "CUDA_VISIBLE_DEVICES": "0",
+            }
+        },
+        {
+            "name": "Python: zero-shot learning",
+            "type": "python",
+            "request": "launch",
+            "console": "internalConsole",
+            "redirectOutput": true,
+            "justMyCode": false,
+            "stopOnEntry": true,
+            "cwd": "${workspaceFolder}/src",
+            "module": "training.main",
+            "args": [
+                "--dataset-type", "synthetic",
+                "--model", "flan-t5-xxl-RN50",
+                "--image-constant-key", "imagenet",
+                "--aug-cfg", "use_timm=True", "hflip=0.5",
+                "--debug",
+                "--precision", "amp_bf16",
+            ],
+            "env": {
+                "HF_ENDPOINT": "https://hf-mirror.com",
+            }
+        }
+    ]
+}
