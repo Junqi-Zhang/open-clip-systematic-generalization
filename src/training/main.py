@@ -379,7 +379,7 @@ def main(args):
                 f"=> loaded checkpoint '{args.resume}' (epoch {start_epoch})")
 
     # initialize datasets
-    tokenizer = get_tokenizer(args.model)
+    tokenizer = None if args.text_embeds_path else get_tokenizer(args.model)
     data = get_data(
         args,
         (preprocess_train, preprocess_val),
