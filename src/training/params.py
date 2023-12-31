@@ -121,6 +121,12 @@ def parse_args(args):
         help="Path to imagenet overall prompt for conducting zero shot evaluation.",
     )
     parser.add_argument(
+        "--imagenet-single-template",
+        type=str,
+        default=None,
+        help="Path to imagenet single template for conducting zero shot evaluation.",
+    )
+    parser.add_argument(
         "--logs",
         type=str,
         default="./logs/",

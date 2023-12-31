@@ -95,6 +95,9 @@ SIMPLE_IMAGENET_TEMPLATES = (
     lambda c: f'a photo of the small {c}.',
 )
 
+SINGLE_IMAGENET_TEMPLATES = (
+    lambda c: f'a photo of the {c}.',
+)
 
 IMAGENET_CLASSNAMES = (
     "tench", "goldfish", "great white shark", "tiger shark", "hammerhead shark", "electric ray",
