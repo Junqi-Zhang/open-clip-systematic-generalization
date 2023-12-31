@@ -10,7 +10,7 @@ import torch.nn.functional as F
 from torch.nn.parallel.distributed import DistributedDataParallel
 
 try:
-    import wandb
+    import wandb  # type: ignore
 except ImportError:
     wandb = None
 
