@@ -74,6 +74,9 @@ def extract_certain_text_embeds(
 def extract_text_embeds(model, data, args, tokenizer):
 
     text_embeds_root = '../data/ImageNet/text_embeds'
+    text_embeds_model = args.model.replace(
+        '-text-embeds-extractor', ''
+    ).replace('-', '_')
     logging.info(f'Start extracting text embeds with {args.model}.')
 
     if 'imagenet-overall-prompt' in data:
@@ -84,7 +87,7 @@ def extract_text_embeds(model, data, args, tokenizer):
             prompt_dict[classname][0]
             for classname in IMAGENET_CLASSNAMES
         ]
-        text_embeds_path = f'{text_embeds_root}/{data_name}_text_embeds.pt'
+        text_embeds_path = f'{text_embeds_root}/{data_name}_{text_embeds_model}.pt'
         extract_certain_text_embeds(
             model,
             classnames=classnames,
@@ -97,7 +100,7 @@ def extract_text_embeds(model, data, args, tokenizer):
 
     if 'imagenet-single-template' in data:
         data_name = 'imagenet-single-template'.replace('-', '_')
-        text_embeds_path = f'{text_embeds_root}/{data_name}_text_embeds.pt'
+        text_embeds_path = f'{text_embeds_root}/{data_name}_{text_embeds_model}.pt'
         extract_certain_text_embeds(
             model,
             classnames=IMAGENET_CLASSNAMES,
