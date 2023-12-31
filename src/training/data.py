@@ -698,6 +698,12 @@ def get_data(args, preprocess_fns, epoch=0, tokenizer=None):
 
     if args.imagenet_overall_prompt is not None:
         data["imagenet-overall-prompt"] = get_imagenet_for_eval_by_path(
-            args, preprocess_val, args.imagenet_overall_prompt)
+            args, preprocess_val, args.imagenet_overall_prompt
+        )
+
+    if args.imagenet_single_template is not None:
+        data["imagenet-single-template"] = get_imagenet_for_eval_by_path(
+            args, preprocess_val, args.imagenet_single_template
+        )
 
     return data

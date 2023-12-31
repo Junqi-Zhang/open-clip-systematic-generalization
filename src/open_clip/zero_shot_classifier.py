@@ -26,6 +26,7 @@ def build_zero_shot_classifier(
         num_classes_per_batch: Optional[int] = 10,
         device: Union[str, torch.device] = 'cpu',
         use_tqdm: bool = False,
+        extract_text_embeds: bool = False
 ):
     """ Build zero-shot classifier weights by iterating over class names in batches
     Args:
@@ -53,9 +54,12 @@ def build_zero_shot_classifier(
         num_batch_classes = len(batch_classnames)
         texts = [template.format(c) if use_format else template(c) for c in batch_classnames for template in templates]
         texts = tokenizer(texts).to(device)
-        class_embeddings = model.encode_text(texts, normalize=True)
-        class_embeddings = class_embeddings.reshape(num_batch_classes, num_templates, -1).mean(dim=1)
-        class_embeddings = class_embeddings / class_embeddings.norm(dim=1, keepdim=True)
+        if extract_text_embeds:
+            class_embeddings = model.encode_text(texts, normalize=False)
+        else:
+            class_embeddings = model.encode_text(texts, normalize=True)
+            class_embeddings = class_embeddings.reshape(num_batch_classes, num_templates, -1).mean(dim=1)
+            class_embeddings = class_embeddings / class_embeddings.norm(dim=1, keepdim=True)
         class_embeddings = class_embeddings.T
         return class_embeddings
 
