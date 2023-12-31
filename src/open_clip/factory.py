@@ -399,6 +399,10 @@ def create_model_and_transforms(
         **model_kwargs,
     )
 
+    if model.visual is None:
+        # no image tower, return model and preprocess transforms
+        return model, None, None
+
     pp_cfg = PreprocessCfg(**model.visual.preprocess_cfg)
 
     preprocess_train = image_transform_v2(

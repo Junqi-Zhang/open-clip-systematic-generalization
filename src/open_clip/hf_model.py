@@ -150,6 +150,10 @@ class HFTextEncoder(nn.Module):
                 nn.GELU(),
                 nn.Linear(hidden_size, output_dim, bias=False),
             )
+        else:
+            raise ValueError(
+                f"proj_type should not be {proj_type}, when d_model != output_dim."
+            )
 
     def forward(self, x: TensorType):
         attn_mask = (x != self.config.pad_token_id).long()

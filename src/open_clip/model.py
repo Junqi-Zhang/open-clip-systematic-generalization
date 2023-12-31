@@ -217,6 +217,28 @@ def _build_text_tower(
     return text
 
 
+def _build_text_embeds_projection(
+        embed_dim: int,
+        text_cfg: CLIPTextCfg,
+):
+    if isinstance(text_cfg, dict):
+        text_cfg = CLIPTextCfg(**text_cfg)
+
+    d_model = text_cfg.width
+    if (d_model == embed_dim) and text_cfg.hf_proj_type is None:
+        text_embeds_projection = nn.Identity()
+    elif text_cfg.hf_proj_type == 'linear':
+        text_embeds_projection = nn.Linear(d_model, embed_dim, bias=False)
+    elif text_cfg.hf_proj_type == 'mlp':
+        hidden_size = (d_model + embed_dim) // 2
+        text_embeds_projection = nn.Sequential(
+            nn.Linear(d_model, hidden_size, bias=False),
+            nn.GELU(),
+            nn.Linear(hidden_size, embed_dim, bias=False),
+        )
+    return text_embeds_projection
+
+
 class CLIP(nn.Module):
     output_dict: torch.jit.Final[bool]
 
@@ -323,7 +345,9 @@ class CustomTextCLIP(nn.Module):
     def __init__(
             self,
             embed_dim: int,
+            vision_tower: bool,
             vision_cfg: CLIPVisionCfg,
+            text_tower: bool,
             text_cfg: CLIPTextCfg,
             quick_gelu: bool = False,
             init_logit_scale: float = np.log(1 / 0.07),
@@ -333,10 +357,22 @@ class CustomTextCLIP(nn.Module):
     ):
         super().__init__()
         self.output_dict = output_dict
-        self.visual = _build_vision_tower(embed_dim, vision_cfg, quick_gelu, cast_dtype)
-        self.text = _build_text_tower(embed_dim, text_cfg, quick_gelu, cast_dtype)
-        self.context_length = self.text.context_length
-        self.vocab_size = self.text.vocab_size
+
+        if vision_tower:
+            self.visual = _build_vision_tower(
+                embed_dim, vision_cfg, quick_gelu, cast_dtype
+            )
+        else:
+            self.visual = None
+        if text_tower:
+            self.text = _build_text_tower(
+                embed_dim, text_cfg, quick_gelu, cast_dtype
+            )
+            self.context_length = self.text.context_length
+            self.vocab_size = self.text.vocab_size
+        else:
+            self.text = _build_text_embeds_projection(embed_dim, text_cfg)
+
         self.logit_scale = nn.Parameter(torch.ones([]) * init_logit_scale)
         if init_logit_bias is not None:
             self.logit_bias = nn.Parameter(torch.ones([]) * init_logit_bias)
@@ -607,9 +643,10 @@ def get_model_preprocess_cfg(model):
 
 def set_model_preprocess_cfg(model, preprocess_cfg: Dict[str, Any]):
     module = getattr(model, 'visual', model)
-    module.image_mean = preprocess_cfg['mean']  # legacy attribute, keeping for bwd compat
-    module.image_std = preprocess_cfg['std']  # legacy attribute, keeping for bwd compat
-    module.preprocess_cfg = copy.deepcopy(preprocess_cfg)  # new attr, package all pp cfg as dict
+    if module is not None:
+        module.image_mean = preprocess_cfg['mean']  # legacy attribute, keeping for bwd compat
+        module.image_std = preprocess_cfg['std']  # legacy attribute, keeping for bwd compat
+        module.preprocess_cfg = copy.deepcopy(preprocess_cfg)  # new attr, package all pp cfg as dict
 
 
 def get_model_tokenize_cfg(model):
