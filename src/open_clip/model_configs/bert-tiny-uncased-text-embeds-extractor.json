@@ -1,0 +1,12 @@
+{
+    "embed_dim": 128,
+    "vision_tower": false,
+    "vision_cfg": {},
+    "text_tower": true,
+    "text_cfg": {
+        "hf_model_name": "gaunernst/bert-tiny-uncased",
+        "hf_tokenizer_name": "gaunernst/bert-tiny-uncased",
+        "hf_proj_type": null,
+        "context_length": 512
+    }
+}
