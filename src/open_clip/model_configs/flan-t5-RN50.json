@@ -1,5 +1,6 @@
 {
     "embed_dim": 1024,
+    "vision_tower": true,
     "vision_cfg": {
         "image_size": 224,
         "layers": [
@@ -11,10 +12,12 @@
         "width": 64,
         "patch_size": null
     },
+    "text_tower": false,
     "text_cfg": {
         "hf_model_name": "google/flan-t5-xxl",
         "hf_tokenizer_name": "google/flan-t5-xxl",
-        "proj": "mlp",
-        "width": 4096
+        "hf_proj_type": "mlp",
+        "width": 4096,
+        "context_length": 512
     }
 }
