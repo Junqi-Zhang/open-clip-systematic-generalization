@@ -3,7 +3,7 @@ wandb/
 models/
 features/
 results/
-data/
+data/ImageNet/*
 
 tests/data/
 *.pt
@@ -154,3 +154,5 @@ core.*
 !src/evaluation/misc/results_dbs/*
 # Ignore all files and folders in .vscode except for launch.json
 !.vscode/launch.json
+# Ignore all files and folders in data/ImageNet except for data/ImageNet/valprep.sh
+!data/ImageNet/valprep.sh
