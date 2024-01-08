@@ -71,6 +71,17 @@
             "env": {
                 "HF_ENDPOINT": "https://hf-mirror.com",
             }
+        },
+        {
+            "name": "Python: split_imagenet.py",
+            "type": "python",
+            "request": "launch",
+            "console": "internalConsole",
+            "redirectOutput": true,
+            "justMyCode": true,
+            "stopOnEntry": true,
+            "cwd": "${workspaceFolder}/data/ImageNet/",
+            "program": "split_imagenet.py"
         }
     ]
 }
