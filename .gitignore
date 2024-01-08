@@ -156,3 +156,7 @@ core.*
 !.vscode/launch.json
 # Ignore all files and folders in data/ImageNet except for data/ImageNet/valprep.sh
 !data/ImageNet/valprep.sh
+# Ignore all files and folders in data/ImageNet except for data/ImageNet/split_imagenet.py
+!data/ImageNet/split_imagenet.py
+# Ignore all files and folders in data/ImageNet except for data/ImageNet/recover_imagenet.sh
+!data/ImageNet/recover_imagenet.sh
