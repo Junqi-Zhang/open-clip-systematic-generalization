@@ -95,7 +95,7 @@ SIMPLE_IMAGENET_TEMPLATES = (
     lambda c: f'a photo of the small {c}.',
 )
 
-SINGLE_IMAGENET_TEMPLATES = (
+SINGLE_IMAGENET_TEMPLATE = (
     lambda c: f'a photo of the {c}.',
 )
 

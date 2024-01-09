@@ -20,7 +20,7 @@ from torch.utils.data.distributed import DistributedSampler
 from webdataset.filters import _shuffle
 from webdataset.tariterators import base_plus_ext, url_opener, tar_file_expander, valid_sample
 from typing import Any, Callable, Optional, Tuple
-from open_clip import SIMPLE_IMAGENET_TEMPLATES, OPENAI_IMAGENET_TEMPLATES
+from open_clip import SIMPLE_IMAGENET_TEMPLATES, OPENAI_IMAGENET_TEMPLATES, SINGLE_IMAGENET_TEMPLATE
 from open_clip import IMAGENET_FOLDERS2CLASSNAMES, IMAGENET_CLASSNAMES
 
 try:
@@ -562,7 +562,8 @@ class FolderTemplateDataset(datasets.ImageFolder):
         transform: Callable,
         template_type: str,
         tokenizer: Optional[Callable] = None,
-        text_embeds_path: Optional[str] = None
+        text_embeds_path: Optional[str] = None,
+        multi_images_per_text: Optional[bool] = False
     ):
         super().__init__(root=root, transform=transform)
         self.templates = self.get_templates(template_type)
@@ -571,6 +572,7 @@ class FolderTemplateDataset(datasets.ImageFolder):
             self.text_embeds = torch.load(
                 text_embeds_path, map_location="cpu"
             ).t()
+        self.multi_images_per_text = multi_images_per_text
 
         # sorted list of folders, coresponding classnames
         all_folders, all_classnames = self.get_all_folders_and_classnames(root)
@@ -585,8 +587,11 @@ class FolderTemplateDataset(datasets.ImageFolder):
 
     def get_templates(self, template_type):
         template_dict = {
-            "simple_imagenet_templates": SIMPLE_IMAGENET_TEMPLATES,
-            "openai_imagenet_templates": OPENAI_IMAGENET_TEMPLATES
+            "imagenet_simple_templates": SIMPLE_IMAGENET_TEMPLATES,
+            "imagenet_openai_templates": OPENAI_IMAGENET_TEMPLATES,
+            "imagenet_single_template": SINGLE_IMAGENET_TEMPLATE,
+            # FIXME this is a hack for text_type prompt
+            "imagenet_overall_prompt": (lambda c: c, )
         }
         if template_type in template_dict:
             return template_dict[template_type]
@@ -611,27 +616,35 @@ class FolderTemplateDataset(datasets.ImageFolder):
         if hasattr(self, "text_embeds"):
             transformed_target = self.target_transform_from_root_to_all[target]
             text_embed = self.text_embeds[transformed_target]
-            return sample, text_embed
+            if self.multi_images_per_text:
+                return sample, text_embed, target
+            else:
+                return sample, text_embed
         else:
             target_classname = self.target_classnames[target]
             text = " ".join([template(target_classname)
                             for template in self.templates])
             if self.tokenizer:
                 text = self.tokenizer(text)[0]
-            return sample, text
+            if self.multi_images_per_text:
+                return sample, text, target
+            else:
+                return sample, text
 
 
 def get_folder_dataset(args, preprocess_fn, is_train, epoch=0, tokenizer=None):
     data_folder = args.train_data if is_train else args.val_data
     assert data_folder
 
-    if "template" in args.text_type:
+    # FIXME this is a hack for text_type prompt
+    if ("template" in args.text_type) or (("prompt" in args.text_type) and (args.text_embeds_path)):
         dataset = FolderTemplateDataset(
             data_folder,
             preprocess_fn,
             template_type=args.text_type,
             tokenizer=tokenizer,
-            text_embeds_path=args.text_embeds_path
+            text_embeds_path=args.text_embeds_path,
+            multi_images_per_text=args.multi_images_per_text
         )
     else:
         raise ValueError(f"Unsupported text type: {args.text_type}.")

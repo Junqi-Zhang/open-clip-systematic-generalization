@@ -61,15 +61,26 @@ def parse_args(args):
         help="Number of samples in dataset. Useful for webdataset if not available in info file.",
     )
     parser.add_argument(
+        "--multi-images-per-text",
+        default=False,
+        action="store_true",
+        help="For datasets where multiple images may be labeled with the same text."
+    )
+    parser.add_argument(
         "--dataset-type",
         choices=["webdataset", "csv", "synthetic", "folder", "auto"],
         default="auto",
-        help="Which type of dataset to process. 'folder' means ImageNet-style folder structure"
+        help="Which type of dataset to process. 'folder' means ImageNet-style folder structure."
     )
     parser.add_argument(
         "--text-type",
-        choices=["simple_imagenet_templates"],
-        default="simple_imagenet_templates",
+        choices=[
+            "imagenet_single_templates", 
+            "imagenet_simple_templates",
+            "imagenet_openai_templates",
+            "imagenet_overall_prompt"
+        ],
+        default="imagenet_single_template",
         help="Which type of text for each image, Useful for folder datasets only."
     )
     parser.add_argument(
@@ -287,6 +298,12 @@ def parse_args(args):
         help="Enable gradient checkpointing.",
     )
     parser.add_argument(
+        "--text-per-image-loss-ratio",
+        type=float,
+        default=0.5,
+        help="Ratio of text-per-image loss to total loss."
+    )
+    parser.add_argument(
         "--local-loss",
         default=False,
         action="store_true",
@@ -486,6 +503,12 @@ def parse_args(args):
         default=False,
         action="store_true",
         help='Use SigLip (sigmoid) loss.'
+    )
+    parser.add_argument(
+        "--cal-class-top1",
+        default=False,
+        action="store_true",
+        help='Calculate top1 accuracy for each class in evaluation.'
     )
 
     args = parser.parse_args(args)

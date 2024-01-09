@@ -11,7 +11,7 @@ except ImportError:
     has_distributed = False
 
 try:
-    import horovod.torch as hvd
+    import horovod.torch as hvd  # type: ignore
 except ImportError:
     hvd = None
 
@@ -73,6 +73,8 @@ class ClipLoss(nn.Module):
             rank=0,
             world_size=1,
             use_horovod=False,
+            text_per_image_loss_ratio=0.5,
+            multi_images_per_text=False
     ):
         super().__init__()
         self.local_loss = local_loss
@@ -81,12 +83,20 @@ class ClipLoss(nn.Module):
         self.rank = rank
         self.world_size = world_size
         self.use_horovod = use_horovod
+        self.text_per_image_loss_ratio = text_per_image_loss_ratio
+        self.multi_images_per_text = multi_images_per_text
 
         # cache state
         self.prev_num_logits = 0
         self.labels = {}
 
-    def get_ground_truth(self, device, num_logits) -> torch.Tensor:
+    def get_ground_truth(self, device, num_logits, targets=None) -> torch.Tensor:
+        if self.multi_images_per_text:
+            assert isinstance(targets, torch.Tensor)
+            targets_unsqueezed = targets.unsqueeze(1)
+            labels = torch.eq(targets_unsqueezed, targets).float().to(device)
+            labels = labels / labels.sum(dim=1, keepdim=True)
+            return labels
         # calculated ground-truth and cache if enabled
         if self.prev_num_logits != num_logits or device not in self.labels:
             labels = torch.arange(num_logits, device=device, dtype=torch.long)
@@ -100,7 +110,9 @@ class ClipLoss(nn.Module):
         return labels
 
     def get_logits(self, image_features, text_features, logit_scale):
-        if self.world_size > 1:
+        # FIXME: Mode multi-images-per-text calculates contrastive loss locally on each GPU separately,
+        #        because targets are not gathered. Try pass targets through model to gather them.
+        if self.world_size > 1 and not self.multi_images_per_text:
             all_image_features, all_text_features = gather_features(
                 image_features, text_features,
                 self.local_loss, self.gather_with_grad, self.rank, self.world_size, self.use_horovod)
@@ -117,16 +129,17 @@ class ClipLoss(nn.Module):
         
         return logits_per_image, logits_per_text
 
-    def forward(self, image_features, text_features, logit_scale, output_dict=False):
+    def forward(self, image_features, text_features, logit_scale, targets=None, output_dict=False):
         device = image_features.device
         logits_per_image, logits_per_text = self.get_logits(image_features, text_features, logit_scale)
 
-        labels = self.get_ground_truth(device, logits_per_image.shape[0])
+        labels = self.get_ground_truth(device, logits_per_image.shape[0], targets)
 
         total_loss = (
-            F.cross_entropy(logits_per_image, labels) +
-            F.cross_entropy(logits_per_text, labels)
-        ) / 2
+            F.cross_entropy(logits_per_image, labels) * self.text_per_image_loss_ratio +
+            F.cross_entropy(logits_per_text, labels) *
+            (1-self.text_per_image_loss_ratio)
+        )
 
         return {"contrastive_loss": total_loss} if output_dict else total_loss
 

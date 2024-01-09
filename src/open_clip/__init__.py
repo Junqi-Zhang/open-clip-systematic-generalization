@@ -13,5 +13,5 @@ from .push_to_hf_hub import push_pretrained_to_hf_hub, push_to_hf_hub
 from .tokenizer import SimpleTokenizer, tokenize, decode
 from .transform import image_transform, AugmentationCfg, get_image_constant
 from .zero_shot_classifier import build_zero_shot_classifier, build_zero_shot_classifier_legacy
-from .zero_shot_metadata import OPENAI_IMAGENET_TEMPLATES, SIMPLE_IMAGENET_TEMPLATES, SINGLE_IMAGENET_TEMPLATES, IMAGENET_CLASSNAMES
+from .zero_shot_metadata import OPENAI_IMAGENET_TEMPLATES, SIMPLE_IMAGENET_TEMPLATES, SINGLE_IMAGENET_TEMPLATE, IMAGENET_CLASSNAMES
 from .imagenet_classes import IMAGENET_FOLDERS2CLASSNAMES

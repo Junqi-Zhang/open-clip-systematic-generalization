@@ -354,6 +354,8 @@ def create_loss(args):
         rank=args.rank,
         world_size=args.world_size,
         use_horovod=args.horovod,
+        text_per_image_loss_ratio=args.text_per_image_loss_ratio,
+        multi_images_per_text=args.multi_images_per_text
     )
 
 
