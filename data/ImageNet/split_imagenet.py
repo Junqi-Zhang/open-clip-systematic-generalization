@@ -1,7 +1,7 @@
 import json
 import sys
 import argparse
-import random
+import numpy as np
 import os
 import shutil
 
@@ -35,7 +35,7 @@ def main(args):
     args = parse_args(args)
     print(json.dumps(vars(args), indent=2))
 
-    random.seed(args.seed)
+    np.random.seed(args.seed)
 
     if args.not_backup_dataset:
         pass
@@ -54,7 +54,7 @@ def main(args):
     num_train_and_val_classes = args.num_train_classes + args.num_val_classes
     assert num_train_and_val_classes == 1000, 'The number of classes in the training and validation set should sum to 1000.'
 
-    shuffled_all_classes = random.sample(all_classes, len(all_classes))
+    shuffled_all_classes = np.random.permutation(all_classes)
     train_classes = shuffled_all_classes[:args.num_train_classes]
     val_classes = shuffled_all_classes[-args.num_val_classes:]
 
