@@ -81,7 +81,7 @@ def parse_args(args):
     parser.add_argument(
         "--text-type",
         choices=[
-            "imagenet_single_templates", 
+            "imagenet_single_template", 
             "imagenet_simple_templates",
             "imagenet_openai_templates",
             "imagenet_overall_prompt"
