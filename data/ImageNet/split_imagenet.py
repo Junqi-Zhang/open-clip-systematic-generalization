@@ -45,10 +45,10 @@ def main(args):
         if not os.path.exists('./val_backup'):
             shutil.copytree('./val', './val_backup')
 
-    all_classes = [
+    all_classes = sorted([
         item for item in os.listdir('./train')
         if os.path.isdir(os.path.join('./train', item))
-    ]
+    ])
     assert len(all_classes) == 1000, 'There should be 1000 classes in total.'
 
     num_train_and_val_classes = args.num_train_classes + args.num_val_classes
