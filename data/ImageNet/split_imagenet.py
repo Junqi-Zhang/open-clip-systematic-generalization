@@ -1,3 +1,4 @@
+import json
 import sys
 import argparse
 import random
@@ -32,6 +33,8 @@ def main(args):
     Main function.
     """
     args = parse_args(args)
+    print(json.dumps(vars(args), indent=2))
+
     random.seed(args.seed)
 
     if args.not_backup_dataset:
