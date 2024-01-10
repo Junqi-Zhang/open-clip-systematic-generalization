@@ -51,6 +51,37 @@
             }
         },
         {
+            "name": "Python: single GPU overfitting",
+            "type": "python",
+            "request": "launch",
+            "console": "internalConsole",
+            "redirectOutput": true,
+            "justMyCode": false,
+            "stopOnEntry": true,
+            "cwd": "${workspaceFolder}/src",
+            "module": "training.main",
+            "args": [
+                "--dataset-type", "folder",
+                "--multi-images-per-text",
+                "--train-data", "../data/ImageNet/overfit",
+                "--imagenet-val", "../data/ImageNet/overfit",
+                "--text-type", "imagenet_overall_prompt",
+                "--text-embeds-path", "../data/ImageNet/text_embeds/imagenet_overall_prompt_flan_t5_xxl.pt",
+                "--model", "flan-t5-xxl-RN50",
+                "--image-constant-key", "imagenet",
+                "--aug-cfg", "use_timm=True", "hflip=0.5",
+                "--precision", "amp_bf16",
+                "--zeroshot-frequency", "1",
+                "--warmup", "0",
+                "--epochs", "100",
+                "--log-every-n-steps", "100",
+            ],
+            "env": {
+                "HF_ENDPOINT": "https://hf-mirror.com",
+                "CUDA_VISIBLE_DEVICES": "0",
+            }
+        },
+        {
             "name": "Python: single GPU zero-shot learning",
             "type": "python",
             "request": "launch",
@@ -63,12 +94,10 @@
             "args": [
                 "--dataset-type", "folder",
                 "--multi-images-per-text",
-                // "--train-data", "../data/ImageNet/train",
-                // "--imagenet-val", "../data/ImageNet/val",
-                "--train-data", "../data/ImageNet/overfit",
-                "--imagenet-val", "../data/ImageNet/overfit",
-                // "--imagenet-single-template", "../data/ImageNet/zero_shot",
-                // "--imagenet-overall-prompt", "../data/ImageNet/zero_shot",
+                "--train-data", "../data/ImageNet/train",
+                "--imagenet-val", "../data/ImageNet/val",
+                "--imagenet-single-template", "../data/ImageNet/zero_shot",
+                "--imagenet-overall-prompt", "../data/ImageNet/zero_shot",
                 "--text-type", "imagenet_overall_prompt",
                 "--text-embeds-path", "../data/ImageNet/text_embeds/imagenet_overall_prompt_flan_t5_xxl.pt",
                 "--model", "flan-t5-xxl-RN50",
@@ -81,6 +110,7 @@
             ],
             "env": {
                 "HF_ENDPOINT": "https://hf-mirror.com",
+                "CUDA_VISIBLE_DEVICES": "0",
             }
         },
         {
