@@ -67,6 +67,12 @@ def parse_args(args):
         help="For datasets where multiple images may be labeled with the same text."
     )
     parser.add_argument(
+        "--normalize-labels",
+        default=False,
+        action="store_true",
+        help="Normalize labels to have unit norm, useful when multiple-images-per-text is True."
+    )
+    parser.add_argument(
         "--dataset-type",
         choices=["webdataset", "csv", "synthetic", "folder", "auto"],
         default="auto",

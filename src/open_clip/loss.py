@@ -74,7 +74,8 @@ class ClipLoss(nn.Module):
             world_size=1,
             use_horovod=False,
             text_per_image_loss_ratio=0.5,
-            multi_images_per_text=False
+            multi_images_per_text=False,
+            normalize_labels=False
     ):
         super().__init__()
         self.local_loss = local_loss
@@ -85,6 +86,7 @@ class ClipLoss(nn.Module):
         self.use_horovod = use_horovod
         self.text_per_image_loss_ratio = text_per_image_loss_ratio
         self.multi_images_per_text = multi_images_per_text
+        self.normalize_labels = normalize_labels
 
         # cache state
         self.prev_num_logits = 0
@@ -95,7 +97,8 @@ class ClipLoss(nn.Module):
             assert isinstance(targets, torch.Tensor)
             targets_unsqueezed = targets.unsqueeze(1)
             labels = torch.eq(targets_unsqueezed, targets).float().to(device)
-            labels = labels / labels.sum(dim=1, keepdim=True)
+            if self.normalize_labels:
+                labels = labels / labels.sum(dim=1, keepdim=True)
             return labels
         # calculated ground-truth and cache if enabled
         if self.prev_num_logits != num_logits or device not in self.labels:

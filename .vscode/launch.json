@@ -63,6 +63,7 @@
             "args": [
                 "--dataset-type", "folder",
                 "--multi-images-per-text",
+                "--normalize-labels",
                 "--train-data", "../data/ImageNet/overfit",
                 "--imagenet-val", "../data/ImageNet/overfit",
                 "--text-type", "imagenet_overall_prompt",
@@ -94,6 +95,7 @@
             "args": [
                 "--dataset-type", "folder",
                 "--multi-images-per-text",
+                "--normalize-labels",
                 "--train-data", "../data/ImageNet/train",
                 "--imagenet-val", "../data/ImageNet/val",
                 "--imagenet-single-template", "../data/ImageNet/zero_shot",
