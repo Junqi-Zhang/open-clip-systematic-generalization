@@ -23,6 +23,8 @@ def parse_args(args):
     #                     help='Number of classes in the test set')
     parser.add_argument('--not-backup-dataset', action='store_true',
                         help='Whether to backup the original dataset')
+    parser.add_argument('--num-overfit-classes', type=int, default=10,
+                        help='Number of classes in the overfit set')
 
     args = parser.parse_args(args)
     return args
@@ -45,6 +47,7 @@ def main(args):
         if not os.path.exists('./val_backup'):
             shutil.copytree('./val', './val_backup')
 
+    # Garantees the same order of all classes on all machines
     all_classes = sorted([
         item for item in os.listdir('./train')
         if os.path.isdir(os.path.join('./train', item))
@@ -57,6 +60,8 @@ def main(args):
     shuffled_all_classes = np.random.permutation(all_classes)
     train_classes = shuffled_all_classes[:args.num_train_classes]
     val_classes = shuffled_all_classes[-args.num_val_classes:]
+    overfit_classes = np.random.choice(
+        all_classes, args.num_overfit_classes, replace=False)
 
     masked_train_dir = './masked_train'
     if not os.path.exists(masked_train_dir):
@@ -64,10 +69,17 @@ def main(args):
     zero_shot_dir = './zero_shot'
     if not os.path.exists(zero_shot_dir):
         os.mkdir(zero_shot_dir)
+    overfit_dir = './overfit'
+    if not os.path.exists(overfit_dir):
+        os.mkdir(overfit_dir)
 
     for val_class in val_classes:
         os.rename('./train/' + val_class, './masked_train/' + val_class)
         os.rename('./val/' + val_class, './zero_shot/' + val_class)
+
+    for overfit_class in overfit_classes:
+        shutil.copytree('./val_backup/' + overfit_class,
+                        './overfit/' + overfit_class)
 
     # Check if the remaining subdirectories in the train directory match train_classes
     remaining_train_classes = [
