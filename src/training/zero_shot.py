@@ -129,6 +129,8 @@ def extract_certain_text_embeds(
 def extract_text_embeds(model, data, args, tokenizer):
 
     text_embeds_root = '../data/ImageNet/text_embeds'
+    if not os.path.exists(text_embeds_root):
+        os.makedirs(text_embeds_root)
     text_embeds_model = args.model.replace(
         '-text-embeds-extractor', ''
     ).replace('-', '_')
