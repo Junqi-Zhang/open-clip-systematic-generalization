@@ -16,10 +16,10 @@ torchrun --nproc_per_node 8 -m training.main \
     --image-constant-key imagenet \
     --aug-cfg use_timm=True hflip=0.5 \
     --precision amp_bf16 \
-    --workers 16 \
+    --workers 32 \
     --zeroshot-frequency 1 \
-    --save-frequency 16 \
-    --epochs 256 \
+    --save-frequency 32 \
+    --epochs 512 \
     --batch-size 128 \
     --warmup 0 \
     --log-every-n-steps 128
