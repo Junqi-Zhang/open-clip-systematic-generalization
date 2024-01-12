@@ -95,6 +95,9 @@ def main(args):
         args.name = '-'.join([
             date_str,
             f"model_{model_name_safe}",
+            f"text_{args.text_type}",
+            f"e_{args.epochs}",
+            f"w_{args.warmup}",
             f"lr_{args.lr}",
             f"b_{args.batch_size}",
             f"j_{args.workers}",
