@@ -28,6 +28,28 @@
             }
         },
         {
+            "name": "Python: extract points prompt text embeds",
+            "type": "python",
+            "request": "launch",
+            "console": "internalConsole",
+            "redirectOutput": true,
+            "justMyCode": false,
+            "stopOnEntry": true,
+            "cwd": "${workspaceFolder}/src",
+            "module": "training.main",
+            "args": [
+                "--imagenet-points-prompt", "../data/ImageNet/val",
+                "--model", "flan-t5-xxl-text-embeds-extractor",
+                "--lock-text",
+                "--debug",
+                "--precision", "amp_bf16",
+            ],
+            "env": {
+                "HF_ENDPOINT": "https://hf-mirror.com",
+                "CUDA_VISIBLE_DEVICES": "0",
+            }
+        },
+        {
             "name": "Python: extract bert-tiny text embeds",
             "type": "python",
             "request": "launch",

@@ -591,7 +591,8 @@ class FolderTemplateDataset(datasets.ImageFolder):
             "imagenet_openai_templates": OPENAI_IMAGENET_TEMPLATES,
             "imagenet_single_template": SINGLE_IMAGENET_TEMPLATE,
             # FIXME this is a hack for text_type prompt
-            "imagenet_overall_prompt": (lambda c: c, )
+            "imagenet_overall_prompt": (lambda c: c, ),
+            "imagenet_points_prompt": (lambda c: c, )
         }
         if template_type in template_dict:
             return template_dict[template_type]
@@ -712,6 +713,11 @@ def get_data(args, preprocess_fns, epoch=0, tokenizer=None):
     if args.imagenet_overall_prompt is not None:
         data["imagenet-overall-prompt"] = get_imagenet_for_eval_by_path(
             args, preprocess_val, args.imagenet_overall_prompt
+        )
+
+    if args.imagenet_points_prompt is not None:
+        data["imagenet-points-prompt"] = get_imagenet_for_eval_by_path(
+            args, preprocess_val, args.imagenet_points_prompt
         )
 
     if args.imagenet_single_template is not None:

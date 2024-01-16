@@ -167,6 +167,47 @@ def extract_text_embeds(model, data, args, tokenizer):
             args=args,
             tokenizer=tokenizer
         )
+    
+    if 'imagenet-points-prompt' in data:
+        # First step: merge all points for each class
+        data_name = 'imagenet-points-prompt'.replace('-', '_')
+        text_embeds_path = f'{text_embeds_root}/{data_name}_{text_embeds_model}.pt'
+        with open(f'../prompts/{data_name}.json', 'r') as f:
+            prompt_dict = json.load(f)
+        # The sort of classnames in imagenet_points_prompt.json has been checked to be correct
+        classnames = [
+            f'This is a photo of the {classname}, some typical visual features include: ' + ','.join(prompt_list) + '.'
+            for classname, prompt_list in prompt_dict.items()
+        ]
+        extract_certain_text_embeds(
+            model,
+            classnames=classnames,
+            templates=(lambda c: c, ),
+            data_name=data_name,
+            text_embeds_path=text_embeds_path,
+            args=args,
+            tokenizer=tokenizer
+        )
+        # Second step: extract text embeds for each point separately
+        separate_data_name = 'imagenet-points-prompt-separate'.replace('-', '_')
+        separate_text_embeds_folder = f'{text_embeds_root}/{separate_data_name}_{text_embeds_model}'
+        if not os.path.exists(separate_text_embeds_folder):
+            os.makedirs(separate_text_embeds_folder)
+        separate_classnames = [
+            (f'This is a photo of the {classname}.', *prompt_list)
+            for classname, prompt_list in prompt_dict.items()
+        ]
+        for i, separate_classname in enumerate(separate_classnames):
+            separate_text_embeds_path = f'{separate_text_embeds_folder}/{i}.pt'
+            extract_certain_text_embeds(
+                model,
+                classnames=separate_classname,  # a tuple
+                templates=(lambda c: c, ),
+                data_name=f'{separate_data_name}_class_{i}',
+                text_embeds_path=separate_text_embeds_path,
+                args=args,
+                tokenizer=tokenizer
+            )
 
     logging.info(f'Finished extracting text embeds with {args.model}.')
 
@@ -177,7 +218,7 @@ def eval_for_training_with_text_embeds(model, data, args):
     )
     results = {}
 
-    def get_eval_text_embeds_path(data_name):
+    def get_eval_text_embeds_path(data_name, separate_per_class=False):
         # args.text_embeds_path is the path of text embeds for training,
         # need to get text_embeds_path corresponding to each dataset
         text_embeds_root = '../data/ImageNet/text_embeds'
@@ -196,6 +237,13 @@ def eval_for_training_with_text_embeds(model, data, args):
             # other than used for zero-shot evaluation,
             # so return the same text_embeds_path as training
             return args.text_embeds_path
+        elif separate_per_class:
+            eval_text_embeds_folder = f'{text_embeds_root}/{data_name}_{text_embeds_model}'
+            if os.path.exists(eval_text_embeds_folder):
+                return eval_text_embeds_folder
+            else:
+                raise ValueError(
+                    f'Text embeddings not found: {eval_text_embeds_folder}')
         else:
             eval_text_embeds_path = f'{text_embeds_root}/{data_name}_{text_embeds_model}.pt'
             if os.path.exists(eval_text_embeds_path):
@@ -232,10 +280,18 @@ def eval_for_training_with_text_embeds(model, data, args):
         model,
         data_name,
         data_folder,
-        templates
+        templates,
+        separate_per_class=False
     ):
         logging.info(f'Building eval classifier for {data_name}.')
-        eval_text_embeds_path = get_eval_text_embeds_path(data_name)
+
+        if separate_per_class:
+            eval_text_embeds_folder = get_eval_text_embeds_path(
+                data_name, separate_per_class=separate_per_class
+            )
+        else:
+            eval_text_embeds_path = get_eval_text_embeds_path(data_name)
+
         eval_class_index, eval_classnames = get_eval_class_index_and_names(
             data_folder
         )
@@ -243,19 +299,39 @@ def eval_for_training_with_text_embeds(model, data, args):
         autocast = get_autocast(args.precision)
         with autocast():
             with torch.no_grad():
-                eval_classifier = torch.load(
-                    eval_text_embeds_path
-                ).T[eval_class_index]
-                # For the text_embeds_projection in text tower
-                eval_classifier = model.encode_text(
-                    eval_classifier,
-                    normalize=True
-                )
-                eval_classifier = eval_classifier.reshape(
-                    len(eval_class_index),
-                    len(templates),
-                    -1
-                ).mean(dim=1)
+
+                if separate_per_class:
+                    all_separate_class_embeds = [
+                        torch.load(
+                            os.path.join(eval_text_embeds_folder, f'{i}.pt')
+                        ).T
+                        for i in eval_class_index
+                    ]
+                    for i, separate_class_embeds in enumerate(all_separate_class_embeds):
+                        separate_class_embeds = model.encode_text(
+                            separate_class_embeds,
+                            normalize=True
+                        )
+                        all_separate_class_embeds[i] = separate_class_embeds[0] * \
+                            0.5 + separate_class_embeds[1:].mean(dim=0) * 0.5
+                    eval_classifier = torch.stack(
+                        all_separate_class_embeds, dim=0
+                    )
+                else:
+                    eval_classifier = torch.load(
+                        eval_text_embeds_path
+                    ).T[eval_class_index]
+                    # For the text_embeds_projection in text tower
+                    eval_classifier = model.encode_text(
+                        eval_classifier,
+                        normalize=True
+                    )
+                    eval_classifier = eval_classifier.reshape(
+                        len(eval_class_index),
+                        len(templates),
+                        -1
+                    ).mean(dim=1)
+
                 eval_classifier = eval_classifier / \
                     eval_classifier.norm(dim=1, keepdim=True)
                 eval_classifier = eval_classifier.T
@@ -283,6 +359,56 @@ def eval_for_training_with_text_embeds(model, data, args):
         if args.cal_class_top1:
             class_top1 = dict(zip(eval_classnames, metrics[2]))
             results['imagenet-overall-prompt-class-top1'] = sorted(
+                class_top1.items(), key=lambda x: x[1], reverse=True
+            )
+
+    if 'imagenet-points-prompt' in data:
+        data_name = 'imagenet-points-prompt'.replace('-', '_')
+        data_folder = args.imagenet_points_prompt
+        eval_classifier, eval_classnames = build_eval_classifier_with_text_embeds(
+            model,
+            data_name,
+            data_folder,
+            templates=(lambda c: c, )
+        )
+        logging.info(f'Using eval classifier for {data_name}.')
+        metrics = run(
+            model,
+            eval_classifier,
+            data['imagenet-points-prompt'].dataloader,
+            args
+        )
+        results['imagenet-points-prompt-top1'] = metrics[0]
+        results['imagenet-points-prompt-top5'] = metrics[1]
+        if args.cal_class_top1:
+            class_top1 = dict(zip(eval_classnames, metrics[2]))
+            results['imagenet-points-prompt-class-top1'] = sorted(
+                class_top1.items(), key=lambda x: x[1], reverse=True
+            )
+
+    if 'imagenet-points-prompt' in data and args.eval_points_prompt_separately:
+        separate_data_name = 'imagenet-points-prompt-separate'.replace(
+            '-', '_')
+        separate_data_folder = args.imagenet_points_prompt
+        eval_classifier, eval_classnames = build_eval_classifier_with_text_embeds(
+            model,
+            separate_data_name,
+            separate_data_folder,
+            templates=(lambda c: c, ),
+            separate_per_class=True
+        )
+        logging.info(f'Using eval classifier for {separate_data_name}.')
+        metrics = run(
+            model,
+            eval_classifier,
+            data['imagenet-points-prompt'].dataloader,
+            args
+        )
+        results['imagenet-points-prompt-separate-top1'] = metrics[0]
+        results['imagenet-points-prompt-separate-top5'] = metrics[1]
+        if args.cal_class_top1:
+            class_top1 = dict(zip(eval_classnames, metrics[2]))
+            results['imagenet-points-prompt-separate-class-top1'] = sorted(
                 class_top1.items(), key=lambda x: x[1], reverse=True
             )
 
@@ -345,6 +471,7 @@ def zero_shot_eval(model, data, epoch, args, tokenizer=None):
         'imagenet-val',
         'imagenet-v2',
         'imagenet-overall-prompt',
+        'imagenet-points-prompt',
         'imagenet-single-template'
     ]
     if not any([dataset_name in data for dataset_name in zero_shot_eval_dataset_names]):

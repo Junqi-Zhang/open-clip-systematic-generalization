@@ -84,7 +84,8 @@ def parse_args(args):
             "imagenet_single_template", 
             "imagenet_simple_templates",
             "imagenet_openai_templates",
-            "imagenet_overall_prompt"
+            "imagenet_overall_prompt",
+            "imagenet_points_prompt",
         ],
         default="imagenet_single_template",
         help="Which type of text for each image, Useful for folder datasets only."
@@ -136,6 +137,18 @@ def parse_args(args):
         type=str,
         default=None,
         help="Path to imagenet overall prompt for conducting zero shot evaluation.",
+    )
+    parser.add_argument(
+        "--imagenet-points-prompt",
+        type=str,
+        default=None,
+        help="Path to imagenet points prompt for conducting zero shot evaluation.",
+    )
+    parser.add_argument(
+        "--eval-points-prompt-separately",
+        default=False,
+        action="store_true",
+        help="Whether to evaluate points prompt separately per class.",
     )
     parser.add_argument(
         "--imagenet-single-template",
