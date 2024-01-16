@@ -127,6 +127,12 @@ def parse_args(args):
         help="Path to imagenet val set for conducting zero shot evaluation.",
     )
     parser.add_argument(
+        "--imagenet-zero-shot",
+        type=str,
+        default=None,
+        help="Path to imagenet zero shot for conducting zero shot evaluation with model trained from scratch.",
+    )
+    parser.add_argument(
         "--imagenet-v2",
         type=str,
         default=None,

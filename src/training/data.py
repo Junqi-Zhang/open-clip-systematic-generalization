@@ -710,6 +710,11 @@ def get_data(args, preprocess_fns, epoch=0, tokenizer=None):
     if args.imagenet_v2 is not None:
         data["imagenet-v2"] = get_imagenet(args, preprocess_fns, "v2")
 
+    if args.imagenet_zero_shot is not None:
+        data["imagenet-zero-shot"] = get_imagenet_for_eval_by_path(
+            args, preprocess_val, args.imagenet_zero_shot
+        )
+
     if args.imagenet_overall_prompt is not None:
         data["imagenet-overall-prompt"] = get_imagenet_for_eval_by_path(
             args, preprocess_val, args.imagenet_overall_prompt

@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 from open_clip import get_input_dtype, get_tokenizer, build_zero_shot_classifier, \
     IMAGENET_CLASSNAMES, IMAGENET_FOLDERS2CLASSNAMES, \
-    OPENAI_IMAGENET_TEMPLATES, SINGLE_IMAGENET_TEMPLATE
+    OPENAI_IMAGENET_TEMPLATES, SINGLE_IMAGENET_TEMPLATE, SIMPLE_IMAGENET_TEMPLATES
 from .precision import get_autocast
 
 
@@ -56,6 +56,20 @@ def accuracy(output, target, topk=(1,)):
     pred = output.topk(max(topk), 1, True, True)[1].t()
     correct = pred.eq(target.view(1, -1).expand_as(pred))
     return [float(correct[:k].reshape(-1).float().sum(0, keepdim=True).cpu().numpy()) for k in topk]
+
+
+def get_templates_from_text_type(text_type):
+    template_dict = {
+        "imagenet_simple_templates": SIMPLE_IMAGENET_TEMPLATES,
+        "imagenet_openai_templates": OPENAI_IMAGENET_TEMPLATES,
+        "imagenet_single_template": SINGLE_IMAGENET_TEMPLATE,
+        # FIXME this is a hack for text_type prompt
+        "imagenet_overall_prompt": (lambda c: c, ),
+        "imagenet_points_prompt": (lambda c: c, )
+    }
+    if text_type not in template_dict:
+        raise ValueError(f"Unsupported text type: {text_type}.")
+    return template_dict[text_type]
 
 
 def run(model, classifier, dataloader, args):
@@ -212,6 +226,31 @@ def extract_text_embeds(model, data, args, tokenizer):
     logging.info(f'Finished extracting text embeds with {args.model}.')
 
 
+def get_eval_class_index_and_names(root):
+
+    if "ImageNet" in root:
+        all_folders = sorted(IMAGENET_FOLDERS2CLASSNAMES.keys())
+        all_classnames = IMAGENET_CLASSNAMES
+    else:
+        raise ValueError(f"Unsupported data folder: {root}.")
+
+    eval_folders = sorted(
+        [
+            folder for folder in os.listdir(root)
+            if os.path.isdir(os.path.join(root, folder))
+        ]
+    )
+
+    eval_class_index = [
+        all_folders.index(folder) for folder in eval_folders
+    ]
+    eval_classnames = [
+        all_classnames[index] for index in eval_class_index
+    ]
+
+    return eval_class_index, eval_classnames
+
+
 def eval_for_training_with_text_embeds(model, data, args):
     logging.info(
         f'Start evaluating {args.model} trained with {args.text_embeds_path}.'
@@ -251,30 +290,6 @@ def eval_for_training_with_text_embeds(model, data, args):
             else:
                 raise ValueError(
                     f'Text embeddings not found: {eval_text_embeds_path}')
-
-    def get_eval_class_index_and_names(root):
-
-        if "ImageNet" in root:
-            all_folders = sorted(IMAGENET_FOLDERS2CLASSNAMES.keys())
-            all_classnames = IMAGENET_CLASSNAMES
-        else:
-            raise ValueError(f"Unsupported data folder: {root}.")
-
-        eval_folders = sorted(
-            [
-                folder for folder in os.listdir(root)
-                if os.path.isdir(os.path.join(root, folder))
-            ]
-        )
-
-        eval_class_index = [
-            all_folders.index(folder) for folder in eval_folders
-        ]
-        eval_classnames = [
-            all_classnames[index] for index in eval_class_index
-        ]
-
-        return eval_class_index, eval_classnames
 
     def build_eval_classifier_with_text_embeds(
         model,
@@ -443,8 +458,7 @@ def eval_for_training_with_text_embeds(model, data, args):
             model,
             data_name,
             data_folder,
-            # FIXME templates should be the same as training, but static here
-            templates=(lambda c: c, )
+            templates=get_templates_from_text_type(args.text_type)
         )
         logging.info(f'Using eval classifier for {data_name}.')
         metrics = run(
@@ -463,6 +477,66 @@ def eval_for_training_with_text_embeds(model, data, args):
 
     logging.info(
         f'Finished evaluating {args.model} trained with {args.text_embeds_path}.')
+    return results
+
+
+def zero_shot_eval_model_trained_from_scratch(model, data, args, tokenizer):
+    if tokenizer is None:
+        tokenizer = get_tokenizer(args.model)
+
+    logging.info(f"Starting evaluating {args.model} trained from scratch.")
+    results = {}
+
+    if 'imagenet-val' in data:
+        eval_classnames = get_eval_class_index_and_names(args.imagenet_val)[1]
+        logging.info(f'Building eval classifier for imagenet_val.')
+        autocast = get_autocast(args.precision)
+        with autocast():
+            eval_classifier = build_zero_shot_classifier(
+                model,
+                tokenizer=tokenizer,
+                classnames=eval_classnames,
+                templates=get_templates_from_text_type(args.text_type),
+                num_classes_per_batch=10,
+                device=args.device,
+                use_tqdm=True,
+            )
+        logging.info(f'Using eval classifier for imagenet_val.')
+        metrics = run(
+            model,
+            eval_classifier,
+            data['imagenet-val'].dataloader,
+            args
+        )
+        results['imagenet-val-top1'] = metrics[0]
+        results['imagenet-val-top5'] = metrics[1]
+
+    if 'imagenet-zero-shot' in data:
+        eval_classnames = get_eval_class_index_and_names(
+            args.imagenet_zero_shot)[1]
+        logging.info(f'Building eval classifier for imagenet-zero-shot.')
+        autocast = get_autocast(args.precision)
+        with autocast():
+            eval_classifier = build_zero_shot_classifier(
+                model,
+                tokenizer=tokenizer,
+                classnames=eval_classnames,
+                templates=get_templates_from_text_type(args.text_type),
+                num_classes_per_batch=10,
+                device=args.device,
+                use_tqdm=True,
+            )
+        logging.info(f'Using eval classifier for imagenet-zero-shot.')
+        metrics = run(
+            model,
+            eval_classifier,
+            data['imagenet-zero-shot'].dataloader,
+            args
+        )
+        results['imagenet-zero-shot-top1'] = metrics[0]
+        results['imagenet-zero-shot-top5'] = metrics[1]
+
+    logging.info(f"Finished evaluating {args.model} trained from scratch.")
     return results
 
 
@@ -492,6 +566,9 @@ def zero_shot_eval(model, data, epoch, args, tokenizer=None):
     # For evaluation after training with extracted text embeddings
     if args.text_embeds_path is not None:
         return eval_for_training_with_text_embeds(model, data, args)
+
+    if "ImageNet" in args.train_data:
+        return zero_shot_eval_model_trained_from_scratch(model, data, args, tokenizer)
 
     logging.info('Starting zero-shot imagenet.')
     if tokenizer is None:
