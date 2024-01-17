@@ -543,6 +543,7 @@ def zero_shot_eval_model_trained_from_scratch(model, data, args, tokenizer):
 def zero_shot_eval(model, data, epoch, args, tokenizer=None):
     zero_shot_eval_dataset_names = [
         'imagenet-val',
+        'imagenet-zero-shot',
         'imagenet-v2',
         'imagenet-overall-prompt',
         'imagenet-points-prompt',
