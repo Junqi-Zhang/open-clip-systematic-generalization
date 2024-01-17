@@ -19,8 +19,8 @@ torchrun --nproc_per_node 8 -m training.main \
     --workers 16 \
     --zeroshot-frequency 1 \
     --save-frequency 32 \
-    --epochs 256 \
-    --batch-size 128 \
+    --epochs 128 \
+    --batch-size 256 \
     --warmup 0 \
     --log-every-n-steps 128 \
     --report-to tensorboard
