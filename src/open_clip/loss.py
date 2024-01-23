@@ -147,6 +147,57 @@ class ClipLoss(nn.Module):
         return {"contrastive_loss": total_loss} if output_dict else total_loss
 
 
+class ConceptualClipLoss(nn.Module):
+
+    def __init__(
+            self,
+            local_loss=False,
+            gather_with_grad=False,
+            cache_labels=False,
+            rank=0,
+            world_size=1,
+            use_horovod=False,
+            text_per_image_loss_ratio=0.5,
+            multi_images_per_text=False,
+            normalize_labels=False
+    ):
+        super().__init__()
+        self.cliploss = ClipLoss(
+            local_loss=local_loss,
+            gather_with_grad=gather_with_grad,
+            cache_labels=cache_labels,
+            rank=rank,
+            world_size=world_size,
+            use_horovod=use_horovod,
+            text_per_image_loss_ratio=text_per_image_loss_ratio,
+            multi_images_per_text=multi_images_per_text,
+            normalize_labels=normalize_labels
+        )
+        self.aux_cliploss = ClipLoss(
+            local_loss=local_loss,
+            gather_with_grad=gather_with_grad,
+            cache_labels=cache_labels,
+            rank=rank,
+            world_size=world_size,
+            use_horovod=use_horovod,
+            text_per_image_loss_ratio=text_per_image_loss_ratio,
+            multi_images_per_text=multi_images_per_text,
+            normalize_labels=normalize_labels
+        )
+
+    def forward(self, image_features, aux_image_features, text_features, logit_scale, targets=None, output_dict=False, **kwargs):
+        clip_loss = self.cliploss(
+            image_features, text_features, logit_scale, targets, output_dict)
+        aux_clip_loss = self.aux_cliploss(
+            aux_image_features, text_features, logit_scale, targets, output_dict)
+        if output_dict:
+            return {
+                "contrastive_loss": clip_loss["contrastive_loss"],
+                "aux_contrastive_loss": aux_clip_loss["contrastive_loss"],
+            }
+        return clip_loss, aux_clip_loss
+
+
 class CoCaLoss(ClipLoss):
     def __init__(
             self,

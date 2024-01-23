@@ -13,7 +13,8 @@ from .constants import OPENAI_DATASET_MEAN, OPENAI_DATASET_STD
 from .model import CLIP, CustomTextCLIP, convert_weights_to_lp, convert_to_custom_text_state_dict,\
     resize_pos_embed, get_cast_dtype, resize_text_pos_embed, set_model_preprocess_cfg
 from .coca_model import CoCa
-from .loss import ClipLoss, DistillClipLoss, CoCaLoss, SigLipLoss
+from .conceptual_model import ConceptualCLIP
+from .loss import ClipLoss, DistillClipLoss, CoCaLoss, SigLipLoss, ConceptualClipLoss
 from .openai import load_openai_model
 from .pretrained import is_pretrained_cfg, get_pretrained_cfg, download_pretrained,\
     list_pretrained_tags_by_model, download_pretrained_from_hf
@@ -246,6 +247,8 @@ def create_model(
         if custom_text:
             if "multimodal_cfg" in model_cfg:
                 model = CoCa(**model_cfg, cast_dtype=cast_dtype)
+            elif "conceptual_cfg" in model_cfg:
+                model = ConceptualCLIP(**model_cfg, cast_dtype=cast_dtype)
             else:
                 model = CustomTextCLIP(**model_cfg, cast_dtype=cast_dtype)
         else:
@@ -346,6 +349,18 @@ def create_loss(args):
         return SigLipLoss(
             rank=args.rank,
             world_size=args.world_size,
+        )
+    elif "conceptual" in args.model.lower():
+        return ConceptualClipLoss(
+            local_loss=args.local_loss,
+            gather_with_grad=args.gather_with_grad,
+            cache_labels=True,
+            rank=args.rank,
+            world_size=args.world_size,
+            use_horovod=args.horovod,
+            text_per_image_loss_ratio=args.text_per_image_loss_ratio,
+            multi_images_per_text=args.multi_images_per_text,
+            normalize_labels=args.normalize_labels,
         )
     return ClipLoss(
         local_loss=args.local_loss,

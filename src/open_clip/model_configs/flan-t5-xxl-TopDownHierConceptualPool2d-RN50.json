@@ -1,0 +1,41 @@
+{
+    "embed_dim": 512,
+    "vision_tower": true,
+    "vision_cfg": {
+        "image_size": 224,
+        "layers": [
+            3,
+            4,
+            6,
+            3
+        ],
+        "width": 64,
+        "patch_size": null
+    },
+    "conceptual_cfg":{
+        "conceptual_type": "TopDownHierConceptualPool2d",
+        "num_low_concepts": 1024,
+        "num_high_concepts": 64,
+        "low_high_max_function": "hardmax",
+        "output_high_concepts_type": "original_high",
+        "detach_low_concepts": true,
+        "preset_hierarchy": true,
+        "image_high_concept_n_head": 4,
+        "image_high_concept_keep_head_dim": true,
+        "image_high_concept_max_function_name": "hard_gumbel",
+        "image_patch_n_head": 1,
+        "image_patch_keep_head_dim": true,
+        "image_patch_max_function_name": "softmax",
+        "patch_low_concept_n_head": 1,
+        "patch_low_concept_keep_head_dim": true,
+        "patch_low_concept_max_function_name": "sparsemax"
+    },
+    "text_tower": false,
+    "text_cfg": {
+        "hf_model_name": "google/flan-t5-xxl",
+        "hf_tokenizer_name": "google/flan-t5-xxl",
+        "hf_proj_type": "mlp",
+        "width": 4096,
+        "context_length": 512
+    }
+}

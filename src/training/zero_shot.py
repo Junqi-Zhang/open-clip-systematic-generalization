@@ -262,7 +262,11 @@ def eval_for_training_with_text_embeds(model, data, args):
         # need to get text_embeds_path corresponding to each dataset
         text_embeds_root = '../data/ImageNet/text_embeds'
 
-        if 'RN50' in args.model:
+        if 'TopDownHierConceptualPool2d-RN50' in args.model:
+            text_embeds_model = args.model.replace(
+                '-TopDownHierConceptualPool2d-RN50', ''
+            ).replace('-', '_')
+        elif 'RN50' in args.model:
             text_embeds_model = args.model.replace(
                 '-RN50', ''
             ).replace('-', '_')
