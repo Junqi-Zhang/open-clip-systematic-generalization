@@ -361,6 +361,7 @@ def create_loss(args):
             text_per_image_loss_ratio=args.text_per_image_loss_ratio,
             multi_images_per_text=args.multi_images_per_text,
             normalize_labels=args.normalize_labels,
+            use_aux_logit_scale=args.use_aux_logit_scale
         )
     return ClipLoss(
         local_loss=args.local_loss,

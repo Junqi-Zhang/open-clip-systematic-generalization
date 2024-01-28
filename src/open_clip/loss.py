@@ -159,7 +159,8 @@ class ConceptualClipLoss(nn.Module):
             use_horovod=False,
             text_per_image_loss_ratio=0.5,
             multi_images_per_text=False,
-            normalize_labels=False
+            normalize_labels=False,
+            use_aux_logit_scale=False
     ):
         super().__init__()
         self.cliploss = ClipLoss(
@@ -173,6 +174,7 @@ class ConceptualClipLoss(nn.Module):
             multi_images_per_text=multi_images_per_text,
             normalize_labels=normalize_labels
         )
+        self.use_aux_logit_scale = use_aux_logit_scale
         self.aux_cliploss = ClipLoss(
             local_loss=local_loss,
             gather_with_grad=gather_with_grad,
@@ -185,11 +187,27 @@ class ConceptualClipLoss(nn.Module):
             normalize_labels=normalize_labels
         )
 
-    def forward(self, image_features, aux_image_features, text_features, logit_scale, targets=None, output_dict=False, **kwargs):
+    def forward(
+            self,
+            image_features,
+            text_features,
+            logit_scale,
+            aux_image_features,
+            aux_text_features=None,
+            aux_logit_scale=None,
+            targets=None,
+            output_dict=False,
+            **kwargs
+    ):
         clip_loss = self.cliploss(
             image_features, text_features, logit_scale, targets, output_dict)
-        aux_clip_loss = self.aux_cliploss(
-            aux_image_features, text_features, logit_scale, targets, output_dict)
+        if self.use_aux_logit_scale:
+            aux_clip_loss = self.aux_cliploss(
+                aux_image_features, aux_text_features, aux_logit_scale, targets, output_dict
+            )
+        else:
+            aux_clip_loss = self.aux_cliploss(
+                aux_image_features, text_features, logit_scale, targets, output_dict)
         if output_dict:
             return {
                 "contrastive_loss": clip_loss["contrastive_loss"],

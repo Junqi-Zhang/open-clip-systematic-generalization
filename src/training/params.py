@@ -81,7 +81,7 @@ def parse_args(args):
     parser.add_argument(
         "--text-type",
         choices=[
-            "imagenet_single_template", 
+            "imagenet_single_template",
             "imagenet_simple_templates",
             "imagenet_openai_templates",
             "imagenet_overall_prompt",
@@ -263,6 +263,12 @@ def parse_args(args):
         type=str,
         default="RN50",
         help="Name of the vision backbone to use.",
+    )
+    parser.add_argument(
+        "--use-aux-logit-scale",
+        default=False,
+        action='store_true',
+        help="Whether to use aux logit scale.",
     )
     parser.add_argument(
         "--pretrained",

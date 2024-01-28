@@ -14,13 +14,13 @@
     },
     "conceptual_cfg":{
         "conceptual_type": "TopDownHierConceptualPool2d",
-        "num_low_concepts": 1024,
-        "num_high_concepts": 64,
+        "num_low_concepts": 2048,
+        "num_high_concepts": 128,
         "low_high_max_function": "hardmax",
         "output_high_concepts_type": "original_high",
         "detach_low_concepts": true,
         "preset_hierarchy": true,
-        "image_high_concept_n_head": 4,
+        "image_high_concept_n_head": 8,
         "image_high_concept_keep_head_dim": true,
         "image_high_concept_max_function_name": "hard_gumbel",
         "image_patch_n_head": 1,
@@ -34,7 +34,7 @@
     "text_cfg": {
         "hf_model_name": "google/flan-t5-xxl",
         "hf_tokenizer_name": "google/flan-t5-xxl",
-        "hf_proj_type": "mlp",
+        "hf_proj_type": "linear",
         "width": 4096,
         "context_length": 512
     }

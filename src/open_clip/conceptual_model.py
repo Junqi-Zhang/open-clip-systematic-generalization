@@ -746,7 +746,7 @@ class TopDownHierConceptPoolResNet(nn.Module):
         ).permute(0, 2, 1)
         assert self.feature_dim == image_patches.size(-1)
         image_patches = image_patches / self.feature_dim ** 0.5
-        
+
         (
             low_conceptual_image,
             high_conceptual_image,
@@ -854,9 +854,13 @@ class ConceptualCLIP(CustomTextCLIP):
 
         self.image_post_layernorm_and_projection = PostLayerNormAndProjection(
             embed_dim)
+        self.text_post_layernorm_and_projection = PostLayerNormAndProjection(
+            embed_dim)
+
+        self.aux_logit_scale = nn.Parameter(torch.ones([]) * init_logit_scale)
         self.aux_image_post_layernorm_and_projection = PostLayerNormAndProjection(
             embed_dim)
-        self.text_post_layernorm_and_projection = PostLayerNormAndProjection(
+        self.aux_text_post_layernorm_and_projection = PostLayerNormAndProjection(
             embed_dim)
 
     def encode_image(self, image, normalize: bool = False):
@@ -875,10 +879,18 @@ class ConceptualCLIP(CustomTextCLIP):
                 aux_image_features, dim=-1) if normalize else aux_image_features
         return image_outputs
 
-    def encode_text(self, text, normalize: bool = False):
+    def encode_text(self, text, normalize: bool = False, need_aux_text_features: bool = False):
         text_features = self.text(text)
+        if self.training and need_aux_text_features:
+            aux_text_features = self.aux_text_post_layernorm_and_projection(
+                text_features)
         text_features = self.text_post_layernorm_and_projection(
             text_features)
+        if self.training and need_aux_text_features:
+            return {
+                "text_features": F.normalize(text_features, dim=-1) if normalize else text_features,
+                "aux_text_features": F.normalize(aux_text_features, dim=-1) if normalize else aux_text_features,
+            }
         return F.normalize(text_features, dim=-1) if normalize else text_features
 
     def forward(
@@ -890,14 +902,27 @@ class ConceptualCLIP(CustomTextCLIP):
 
         image_outputs = self.encode_image(
             image, normalize=True) if image is not None else None
-        text_features = self.encode_text(
-            text, normalize=True) if text is not None else None
+        if image_outputs and "aux_image_features" in image_outputs:
+            need_aux_text_features = True
+        else:
+            need_aux_text_features = False
+        text_outputs = self.encode_text(
+            text, normalize=True,
+            need_aux_text_features=need_aux_text_features) if text is not None else None
 
-        out_dict = {
-            **image_outputs,
-            "text_features": text_features,
-            "logit_scale": self.logit_scale.exp()
-        }
+        if self.training and need_aux_text_features:
+            out_dict = {
+                **image_outputs,
+                **text_outputs,
+                "logit_scale": self.logit_scale.exp(),
+                "aux_logit_scale": self.aux_logit_scale.exp(),
+            }
+        else:
+            out_dict = {
+                **image_outputs,
+                "text_features": text_outputs,
+                "logit_scale": self.logit_scale.exp(),
+            }
         if self.logit_bias is not None:
             out_dict['logit_bias'] = self.logit_bias
         return out_dict
