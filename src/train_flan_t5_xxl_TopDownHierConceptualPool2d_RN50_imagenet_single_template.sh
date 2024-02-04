@@ -1,5 +1,5 @@
-# Description: Training script for FLAN-T5-XXL-TopDownHierConceptualPool2d-RN50 with overall prompt on ImageNet
-# Usage: bash train_flan_t5_xxl_TopDownHierConceptualPool2d_RN50_imagenet_overall_prompt.sh
+# Description: Training script for FLAN-T5-XXL-TopDownHierConceptualPool2d-RN50 with single template on ImageNet
+# Usage: bash train_flan_t5_xxl_TopDownHierConceptualPool2d_RN50_imagenet_single_template.sh
 OMP_NUM_THREADS=2 \
 CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 \
 torchrun --nproc_per_node 8 -m training.main \
@@ -10,8 +10,8 @@ torchrun --nproc_per_node 8 -m training.main \
     --imagenet-val '../data/ImageNet/val' \
     --imagenet-single-template '../data/ImageNet/zero_shot' \
     --imagenet-overall-prompt '../data/ImageNet/zero_shot' \
-    --text-type imagenet_overall_prompt \
-    --text-embeds-path '../data/ImageNet/text_embeds/imagenet_overall_prompt_flan_t5_xxl.pt' \
+    --text-type imagenet_single_template \
+    --text-embeds-path '../data/ImageNet/text_embeds/imagenet_single_template_flan_t5_xxl.pt' \
     --model flan-t5-xxl-TopDownHierConceptualPool2d-RN50 \
     --use-aux-logit-scale \
     --image-constant-key imagenet \

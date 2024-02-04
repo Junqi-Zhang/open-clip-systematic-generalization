@@ -14,7 +14,7 @@
     },
     "conceptual_cfg":{
         "conceptual_type": "TopDownHierConceptualPool2d",
-        "num_low_concepts": 2048,
+        "num_low_concepts": 4096,
         "num_high_concepts": 128,
         "low_high_max_function": "hardmax",
         "output_high_concepts_type": "original_high",
