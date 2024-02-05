@@ -6,7 +6,7 @@
     "configurations": [
         {
             "name": "Python: extract text embeds",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "console": "internalConsole",
             "redirectOutput": true,
@@ -29,7 +29,7 @@
         },
         {
             "name": "Python: extract points prompt text embeds",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "console": "internalConsole",
             "redirectOutput": true,
@@ -51,7 +51,7 @@
         },
         {
             "name": "Python: extract bert-tiny text embeds",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "console": "internalConsole",
             "redirectOutput": true,
@@ -74,7 +74,7 @@
         },
         {
             "name": "Python: single GPU overfitting",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "console": "internalConsole",
             "redirectOutput": true,
@@ -107,7 +107,7 @@
         },
         {
             "name": "Python: single GPU zero-shot learning",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "console": "internalConsole",
             "redirectOutput": true,
@@ -140,7 +140,7 @@
         },
         {
             "name": "Python: split_imagenet.py",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "console": "internalConsole",
             "redirectOutput": true,
@@ -151,7 +151,7 @@
         },
         {
             "name": "Python: clip from scratch",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "console": "internalConsole",
             "redirectOutput": true,
