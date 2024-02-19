@@ -1,7 +1,7 @@
 # Description: Training script for FLAN-T5-XXL-TopDownHierConceptualPool2d-RN50 with overall prompt on ImageNet
 # Usage: bash train_flan_t5_xxl_TopDownHierConceptualPool2d_RN50_imagenet_overall_prompt.sh
 OMP_NUM_THREADS=2 \
-CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 \
+CUDA_VISIBLE_DEVICES=1,2,3,4,5,6,7,8 \
 torchrun --nproc_per_node 8 -m training.main \
     --dataset-type folder \
     --multi-images-per-text \
